@@ -2,14 +2,14 @@ import tomllib
 from pathlib import Path
 from dataclasses import dataclass
 from urllib.parse import urlparse
-from pydantic import BaseModel, ConfigDict, HttpUrl, PositiveInt
+from pydantic import BaseModel, ConfigDict, HttpUrl, PositiveInt, SecretStr
 
 
 class Config(BaseModel):
     source_endpoint_url: HttpUrl
     result_endpoint_url: HttpUrl
     secret_scope: str
-    secret_key: str
+    secret_key: SecretStr
     simulation_mode: bool
     history_days: PositiveInt
     request_timeout_s: PositiveInt
