@@ -6,8 +6,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 
 **P0**
 - [x] Move hardcoded constants into TOML config
-- [ ] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
-- [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
+- [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [ ] Single shared feature extraction implementation (training + inference)
 - [ ] Unit tests: feature extraction correctness
 - [ ] Integration tests: model output shape/columns against prepared data
@@ -15,6 +14,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Auto-generate data schema/contract at training time, version with model artifact, validate on both train + inference
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
 - [ ] Secret → vault abstraction (move off plain TOML field; base config refactor already done per git log)
+- [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
 
 **P1**
 - [ ] Categorical feature drift: alert on unknown/unseen category values
