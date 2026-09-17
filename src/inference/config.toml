@@ -3,6 +3,4 @@ result_endpoint_url = "https://example.invalid/api/demand-forecast"
 secret_scope = "demand-forecast"
 simulation_mode = true
 secret_key = "secret_key" # TODO: env var!
-
-request_timeout_s = 30
 history_days = 60

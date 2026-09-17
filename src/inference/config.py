@@ -12,8 +12,6 @@ class Config(BaseModel):
     secret_key: SecretStr
     simulation_mode: bool
     history_days: PositiveInt
-    request_timeout_s: PositiveInt
-
     model_config = ConfigDict(frozen=True)
 
 

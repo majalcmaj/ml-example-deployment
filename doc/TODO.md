@@ -5,7 +5,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 ## Deliverable 1: Refactored code
 
 **P0**
-- [ ] Move hardcoded constants into TOML config
+- [x] Move hardcoded constants into TOML config
 - [ ] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
 - [ ] Single shared feature extraction implementation (training + inference)
