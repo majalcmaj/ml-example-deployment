@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=2fbd5d9; date=2026-09-18 -->
 # Phase 06 — cleanup
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 2fbd5d9 (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 
