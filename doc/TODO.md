@@ -7,6 +7,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 **P0**
 - [x] Move hardcoded constants into TOML config
 - [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
+- [x] Regression tests
 - [ ] Single shared feature extraction implementation (training + inference)
 - [ ] Unit tests: feature extraction correctness
 - [ ] Integration tests: model output shape/columns against prepared data
