@@ -4,7 +4,11 @@ test:
 	uv run pytest
 
 .PHONY: check
-check: 
+check:
 	uv run ruff check
 	$(MAKE) test
+
+.PHONY: test-regression
+test-regression:
+	uv run pytest tests/regression
 
