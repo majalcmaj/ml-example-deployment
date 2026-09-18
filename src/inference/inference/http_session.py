@@ -1,12 +1,11 @@
-from urllib3.util import Retry
+from common.context import CORRELATION_ID
 from requests import Response, Session
 from requests.adapters import HTTPAdapter
-
-from common.context import CORRELATION_ID
+from urllib3.util import Retry
 
 
 class TimeoutSession(Session):
-    def request(self, *arg, **kwargs) -> Response:
+    def request(self, *arg: object, **kwargs: object) -> Response:
         kwargs.setdefault("timeout", 30)
         return super().request(*arg, **kwargs)
 

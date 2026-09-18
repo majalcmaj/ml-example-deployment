@@ -1,4 +1,5 @@
-from logging import Logger, LoggerAdapter, getLogger, StreamHandler, Formatter, INFO
+from logging import INFO, Formatter, Logger, LoggerAdapter, StreamHandler, getLogger
+
 from common.context import CORRELATION_ID
 
 

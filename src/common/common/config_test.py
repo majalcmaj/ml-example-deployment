@@ -1,9 +1,14 @@
-from pathlib import Path
+from __future__ import annotations
 
-import pytest
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel
 
 from common.config import find_project_root, load_config
+
+if TYPE_CHECKING:
+    import pytest
 
 
 class _Model(BaseModel):

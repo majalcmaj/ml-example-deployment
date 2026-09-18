@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=445fdcf; date=2026-09-18 -->
 # Phase 05 — mutation-tests
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 445fdcf (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 
