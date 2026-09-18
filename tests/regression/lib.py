@@ -26,8 +26,12 @@ def _run_notebook(notebook_path: Path, cwd: Path) -> None:
 
 
 def produce_training_artifacts(repo_root: Path, outputs_root: Path) -> None:
+    # cwd must be outputs_root/src (mirrors the notebook's real location), not
+    # outputs_root itself, so `common` resolves as a sibling package. See TODO
+    # in conftest.py's outputs_root fixture.
     _run_notebook(
-        repo_root / "src" / "daily_product_demand_forecast.ipynb", outputs_root
+        repo_root / "src" / "daily_product_demand_forecast.ipynb",
+        outputs_root / "src",
     )
 
 
