@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=b1d94a3; date=2026-09-18 -->
 # phase04 · Job 02 — training
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — b1d94a3 (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` and the parent phase file first. This job runs in its own git
 worktree; touch only the files in its slice (jobs are file-disjoint).

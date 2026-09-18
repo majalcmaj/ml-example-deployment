@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=b1d94a3; date=2026-09-18 -->
 # Phase 04 — members-e2e
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — b1d94a3 (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 

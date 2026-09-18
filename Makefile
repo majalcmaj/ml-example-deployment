@@ -12,6 +12,10 @@ check:
 test-regression:
 	uv run pytest tests/regression
 
+.PHONY: test-mutation
+test-mutation:
+	./scripts/mutation_check.sh
+
 # Regenerates src/inference/tests/baseline/{xgb_daily_product_demand.json,forecast_metadata.joblib}
 # by running the training notebook at repo root (training must be in the dev venv, which it is
 # by default via the root `dev` dependency group). After it runs, `uv run --package inference
