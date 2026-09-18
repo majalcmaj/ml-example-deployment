@@ -1122,6 +1122,8 @@ dependencies = [
 dev = [
     { name = "debugpy" },
     { name = "jupyter" },
+    { name = "nbclient" },
+    { name = "nbformat" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -1140,6 +1142,8 @@ requires-dist = [
 dev = [
     { name = "debugpy", specifier = ">=1.8.21" },
     { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "nbclient", specifier = ">=0.10" },
+    { name = "nbformat", specifier = ">=5.10" },
     { name = "pytest", specifier = ">=9.1.0" },
     { name = "ruff", specifier = ">=0.15.17" },
 ]

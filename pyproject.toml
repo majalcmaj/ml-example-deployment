@@ -19,6 +19,8 @@ dev = [
     "pytest>=9.1.0",
     "ruff>=0.15.17",
     "jupyter>=1.1.1",
+    "nbclient>=0.10",
+    "nbformat>=5.10",
 ]
 
 [tool.ruff.lint]
