@@ -22,7 +22,9 @@ BASELINE_DIR = Path(__file__).parent / "baseline"
 
 def _run_notebook(notebook_path: Path, repo_root: Path) -> None:
     nb = nbformat.read(notebook_path, as_version=4)
-    NotebookClient(nb, resources={"metadata": {"path": str(repo_root)}}).execute()
+    NotebookClient(nb, resources={"metadata": {"path": str(repo_root)}}).execute(
+        cwd=repo_root
+    )
 
 
 def produce_training_artifacts(repo_root: Path) -> None:
@@ -30,7 +32,10 @@ def produce_training_artifacts(repo_root: Path) -> None:
 
 
 def produce_inference_artifacts(repo_root: Path) -> None:
-    _run_notebook(repo_root / "src" / "daily_product_demand_inference.ipynb", repo_root)
+    _run_notebook(
+        repo_root / "src" / "inference" / "daily_product_demand_inference.ipynb",
+        repo_root / "src" / "inference",
+    )
 
 
 def load_csv(name: str, *, repo_root: Path, baseline: bool = False) -> pd.DataFrame:
@@ -38,7 +43,9 @@ def load_csv(name: str, *, repo_root: Path, baseline: bool = False) -> pd.DataFr
     return pd.read_csv(base / name)
 
 
-def load_joblib(name: str, *, repo_root: Path, baseline: bool = False) -> dict[str, object]:
+def load_joblib(
+    name: str, *, repo_root: Path, baseline: bool = False
+) -> dict[str, object]:
     base = BASELINE_DIR if baseline else repo_root / "outputs"
     return joblib.load(base / name)
 
