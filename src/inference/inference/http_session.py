@@ -2,7 +2,7 @@ from urllib3.util import Retry
 from requests import Response, Session
 from requests.adapters import HTTPAdapter
 
-from context import CORRELATION_ID
+from common.context import CORRELATION_ID
 
 
 class TimeoutSession(Session):

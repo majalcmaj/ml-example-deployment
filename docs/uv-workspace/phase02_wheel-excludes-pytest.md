@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=f7b707c; date=2026-09-18 -->
 # Phase 02 — wheel-excludes-pytest
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — f7b707c (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 
