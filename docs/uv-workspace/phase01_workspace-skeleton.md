@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=da3a2fa2b3e248438b83f9d9cc423e920376760c; date=2026-09-18 -->
 # Phase 01 — workspace-skeleton
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — da3a2fa2b3e248438b83f9d9cc423e920376760c (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 

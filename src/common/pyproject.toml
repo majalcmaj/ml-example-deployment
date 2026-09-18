@@ -13,3 +13,4 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-root = ""
+wheel-exclude = ["**/*_test.py", "**/conftest.py"]

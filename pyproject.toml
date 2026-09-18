@@ -24,3 +24,9 @@ testkit = { workspace = true }
 
 [tool.ruff.lint]
 extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]
+
+[tool.pytest.ini_options]
+testpaths = ["src", "tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "--import-mode=importlib"
+markers = ["e2e: executes a notebook end-to-end"]
