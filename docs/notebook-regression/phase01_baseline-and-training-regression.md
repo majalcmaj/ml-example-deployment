@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=bcefa314e85def53b64371b649d93210b1936d6d; date=2026-09-18 -->
 # Phase 01 — baseline-and-training-regression
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — bcefa314e85def53b64371b649d93210b1936d6d (2026-09-18)
 
 Read `docs/notebook-regression/prompt.md` first.
 
