@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=03611065ef4b6f10c0981c1bc3c71af028d2c4eb; date=2026-09-18 -->
 # Phase 02 — inference-output-and-regression
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 03611065ef4b6f10c0981c1bc3c71af028d2c4eb (2026-09-18)
 
 Read `docs/notebook-regression/prompt.md` first.
 
