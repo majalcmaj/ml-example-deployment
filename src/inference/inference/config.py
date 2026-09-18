@@ -1,7 +1,6 @@
-import tomllib
 from pathlib import Path
-from dataclasses import dataclass
-from urllib.parse import urlparse
+
+from common.config import load_config
 from pydantic import BaseModel, ConfigDict, HttpUrl, PositiveInt, SecretStr
 
 
@@ -12,13 +11,10 @@ class Config(BaseModel):
     secret_key: SecretStr
     simulation_mode: bool
     history_days: PositiveInt
+    data_dir: Path
+    artifact_dir: Path
+    output_dir: Path
     model_config = ConfigDict(frozen=True)
 
 
-def _parse_config() -> Config:
-    with Path("config.toml").open() as f:
-        content = f.read()
-        return Config(**tomllib.loads(content))
-
-
-CONFIG = _parse_config()
+CONFIG = load_config(Config, Path(__file__).parent / "config.toml", env_prefix="INFERENCE")

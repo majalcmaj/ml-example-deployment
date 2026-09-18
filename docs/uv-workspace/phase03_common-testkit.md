@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=5bb65d3; date=2026-09-18 -->
 # Phase 03 — common-testkit
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 5bb65d3 (2026-09-18)
 
 Read `docs/uv-workspace/prompt.md` first.
 

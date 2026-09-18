@@ -4,3 +4,6 @@ secret_scope = "demand-forecast"
 simulation_mode = true
 secret_key = "secret_key" # TODO: env var!
 history_days = 60
+data_dir = "data"
+artifact_dir = "outputs"
+output_dir = "outputs"
