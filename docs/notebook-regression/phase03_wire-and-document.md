@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=98dc8472d93bf99f9b28b4cc5bb7a72a8693a259; date=2026-09-18 -->
 # Phase 03 — wire-and-document
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 98dc8472d93bf99f9b28b4cc5bb7a72a8693a259 (2026-09-18)
 
 Read `docs/notebook-regression/prompt.md` first.
 
