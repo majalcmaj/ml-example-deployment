@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import pytest
@@ -13,5 +14,13 @@ def repo_root() -> Path:
 
 
 @pytest.fixture(scope="session")
-def training_run(repo_root: Path) -> None:
-    lib.produce_training_artifacts(repo_root)
+def outputs_root(tmp_path_factory: pytest.TempPathFactory, repo_root: Path) -> Path:
+    root = tmp_path_factory.mktemp("regression-artifacts")
+    shutil.copytree(repo_root / "data", root / "data")
+    shutil.copytree(repo_root / "src" / "inference", root / "src" / "inference")
+    return root
+
+
+@pytest.fixture(scope="session")
+def training_run(repo_root: Path, outputs_root: Path) -> None:
+    lib.produce_training_artifacts(repo_root, outputs_root)
