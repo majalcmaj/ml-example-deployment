@@ -17,11 +17,9 @@ def repo_root() -> Path:
 def outputs_root(tmp_path_factory: pytest.TempPathFactory, repo_root: Path) -> Path:
     root = tmp_path_factory.mktemp("regression-artifacts")
     shutil.copytree(repo_root / "data", root / "data")
-    shutil.copytree(repo_root / "src" / "inference", root / "src" / "inference")
-    # TODO: `common` is imported as a bare top-level package by the notebooks
-    # (sys.path hack), so it has to be staged as a sibling dir for nbclient to
-    # resolve it. Drop this once training/inference move off notebooks.
-    shutil.copytree(repo_root / "src" / "common", root / "src" / "common")
+    shutil.copytree(
+        repo_root / "src" / "inference" / "inference", root / "src" / "inference"
+    )
     return root
 
 

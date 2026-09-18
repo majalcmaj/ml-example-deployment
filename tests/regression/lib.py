@@ -26,18 +26,18 @@ def _run_notebook(notebook_path: Path, cwd: Path) -> None:
 
 
 def produce_training_artifacts(repo_root: Path, outputs_root: Path) -> None:
-    # cwd must be outputs_root/src (mirrors the notebook's real location), not
-    # outputs_root itself, so `common` resolves as a sibling package. See TODO
-    # in conftest.py's outputs_root fixture.
     _run_notebook(
-        repo_root / "src" / "daily_product_demand_forecast.ipynb",
-        outputs_root / "src",
+        repo_root / "src" / "training" / "training" / "daily_product_demand_forecast.ipynb",
+        outputs_root,
     )
 
 
 def produce_inference_artifacts(repo_root: Path, outputs_root: Path) -> None:
+    # cwd is 2 levels deep (not 3, matching the real src/inference/inference/ path) so the
+    # notebook's own `cwd.parent.parent / "outputs"` autodetect (untouched until phase04) still
+    # reaches outputs_root/outputs. nbclient's cwd is independent of the .ipynb file's own path.
     _run_notebook(
-        repo_root / "src" / "inference" / "daily_product_demand_inference.ipynb",
+        repo_root / "src" / "inference" / "inference" / "daily_product_demand_inference.ipynb",
         outputs_root / "src" / "inference",
     )
 

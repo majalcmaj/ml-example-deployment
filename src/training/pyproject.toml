@@ -1,0 +1,26 @@
+[project]
+name = "training"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "common",
+    "joblib>=1.6.0",
+    "matplotlib>=3.11.1",
+    "pandas>=3.0.5",
+    "scikit-learn>=1.9.0",
+    "xgboost>=3.4.1",
+]
+
+[dependency-groups]
+dev = ["testkit"]
+
+[tool.uv.sources]
+common = { workspace = true }
+testkit = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.12.0,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""

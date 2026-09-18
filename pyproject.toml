@@ -4,35 +4,23 @@ version = "0.1.0"
 description = "A demonstration production-ready ML project"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = [
-    "joblib>=1.6.0",
-    "matplotlib>=3.11.1",
-    "pandas>=3.0.5",
-    "pydantic>=2.13.5",
-    "scikit-learn>=1.9.0",
-    "xgboost>=3.4.1",
-]
+dependencies = []
 
 [dependency-groups]
-dev = [
-    "debugpy>=1.8.21",
-    "pytest>=9.1.0",
-    "ruff>=0.15.17",
-    "jupyter>=1.1.1",
-    "nbclient>=0.10",
-    "nbformat>=5.10",
-]
+dev = ["common", "inference", "training", "testkit",
+       "ruff>=0.15.17", "debugpy>=1.8.21", "jupyter>=1.1.1"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["src/*"]
+
+[tool.uv.sources]
+common = { workspace = true }
+inference = { workspace = true }
+training = { workspace = true }
+testkit = { workspace = true }
 
 [tool.ruff.lint]
-# Extend default rules (E, F) with additional strict categories
-extend-select = [
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "RET",    # flake8-return
-    "SIM",    # flake8-simplify
-    "UP",     # pyupgrade
-    "ANN",    # flake8-annotations (optional, for strict typing)
-    "PTH",    # flake8-use-pathlib
-    "ARG",    # flake8-unused-arguments
-    "TCH",    # flake8-type-checking
-]
+extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]

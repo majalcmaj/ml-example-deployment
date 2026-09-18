@@ -7,6 +7,15 @@ resolution-markers = [
     "sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 
+[manifest]
+members = [
+    "common",
+    "inference",
+    "ml-deployment",
+    "testkit",
+    "training",
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.8.0"
@@ -361,6 +370,21 @@ wheels = [
 ]
 
 [[package]]
+name = "common"
+version = "0.1.0"
+source = { editable = "src/common" }
+dependencies = [
+    { name = "pandas" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pandas", specifier = ">=3.0.5" },
+    { name = "pydantic", specifier = ">=2.13.5" },
+]
+
+[[package]]
 name = "contourpy"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -565,6 +589,37 @@ sdist = { url = "https://files.pythonhosted.org/packages/f5/08/8eea9d4b8302028f3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl", hash = "sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c", size = 69583, upload-time = "2026-09-17T14:11:03.168Z" },
 ]
+
+[[package]]
+name = "inference"
+version = "0.1.0"
+source = { editable = "src/inference" }
+dependencies = [
+    { name = "common" },
+    { name = "joblib" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "xgboost" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "testkit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "common", editable = "src/common" },
+    { name = "joblib", specifier = ">=1.6.0" },
+    { name = "pandas", specifier = ">=3.0.5" },
+    { name = "pydantic", specifier = ">=2.13.5" },
+    { name = "requests", specifier = ">=2.32" },
+    { name = "xgboost", specifier = ">=3.4.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "testkit", editable = "src/testkit" }]
 
 [[package]]
 name = "iniconfig"
@@ -1151,43 +1206,29 @@ wheels = [
 name = "ml-deployment"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "joblib" },
-    { name = "matplotlib" },
-    { name = "pandas" },
-    { name = "pydantic" },
-    { name = "scikit-learn" },
-    { name = "xgboost" },
-]
 
 [package.dev-dependencies]
 dev = [
+    { name = "common" },
     { name = "debugpy" },
+    { name = "inference" },
     { name = "jupyter" },
-    { name = "nbclient" },
-    { name = "nbformat" },
-    { name = "pytest" },
     { name = "ruff" },
+    { name = "testkit" },
+    { name = "training" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "joblib", specifier = ">=1.6.0" },
-    { name = "matplotlib", specifier = ">=3.11.1" },
-    { name = "pandas", specifier = ">=3.0.5" },
-    { name = "pydantic", specifier = ">=2.13.5" },
-    { name = "scikit-learn", specifier = ">=1.9.0" },
-    { name = "xgboost", specifier = ">=3.4.1" },
-]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "common", editable = "src/common" },
     { name = "debugpy", specifier = ">=1.8.21" },
+    { name = "inference", editable = "src/inference" },
     { name = "jupyter", specifier = ">=1.1.1" },
-    { name = "nbclient", specifier = ">=0.10" },
-    { name = "nbformat", specifier = ">=5.10" },
-    { name = "pytest", specifier = ">=9.1.0" },
     { name = "ruff", specifier = ">=0.15.17" },
+    { name = "testkit", editable = "src/testkit" },
+    { name = "training", editable = "src/training" },
 ]
 
 [[package]]
@@ -2067,6 +2108,29 @@ wheels = [
 ]
 
 [[package]]
+name = "testkit"
+version = "0.1.0"
+source = { editable = "src/testkit" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "joblib" },
+    { name = "nbclient" },
+    { name = "nbformat" },
+    { name = "pandas" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ipykernel" },
+    { name = "joblib" },
+    { name = "nbclient", specifier = ">=0.10" },
+    { name = "nbformat", specifier = ">=5.10" },
+    { name = "pandas" },
+    { name = "pytest", specifier = ">=9.1.0" },
+]
+
+[[package]]
 name = "threadpoolctl"
 version = "3.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2103,6 +2167,37 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/d4/5901517f05affd752490f6a654ba31b7474664e8dd80bd045a00c220bd88/tornado-6.5.10-cp39-abi3-win_amd64.whl", hash = "sha256:37ae8f150cecfdbf747fc4e12f5e9a97ecd8cf1d4cdb3f119e2de84b11196918", size = 468828, upload-time = "2026-09-15T13:47:45.961Z" },
     { url = "https://files.pythonhosted.org/packages/f3/1a/fd497f3a7f7b74bb04f4b94536b5c9f80742b5d50501fd27977652ddec16/tornado-6.5.10-cp39-abi3-win_arm64.whl", hash = "sha256:ce045d3c298fddd30e89a2777f97039d1b641eb9518ac7b26a4721903539c694", size = 467847, upload-time = "2026-09-15T13:47:47.283Z" },
 ]
+
+[[package]]
+name = "training"
+version = "0.1.0"
+source = { editable = "src/training" }
+dependencies = [
+    { name = "common" },
+    { name = "joblib" },
+    { name = "matplotlib" },
+    { name = "pandas" },
+    { name = "scikit-learn" },
+    { name = "xgboost" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "testkit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "common", editable = "src/common" },
+    { name = "joblib", specifier = ">=1.6.0" },
+    { name = "matplotlib", specifier = ">=3.11.1" },
+    { name = "pandas", specifier = ">=3.0.5" },
+    { name = "scikit-learn", specifier = ">=1.9.0" },
+    { name = "xgboost", specifier = ">=3.4.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "testkit", editable = "src/testkit" }]
 
 [[package]]
 name = "traitlets"
