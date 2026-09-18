@@ -8,7 +8,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] Move hardcoded constants into TOML config
 - [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [x] Regression tests
-- [ ] Single shared feature extraction implementation (training + inference)
+- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks
 - [ ] Unit tests: feature extraction correctness
 - [ ] Integration tests: model output shape/columns against prepared data
 - [ ] End-to-end tests: full pipeline against Docker Compose mocks
@@ -26,7 +26,8 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 **P2 — open questions**
 - [ ] Local/offline inference mode vs folding entirely into Compose stubs — keep or drop?
 - [ ] Honor `Retry-After` on 429; confirm mock API actually supports idempotency keys server-side
-- [ ] Separate one-off exploration from diagnostics that should run/log every training run
+- [ ] Separate one-off exploration from diagnostics that should run/log every training run — concretely: pull training notebook's inspect/validate EDA cell (`display(raw_sales.head())`, shape prints) out into its own scratch notebook, keep the training pipeline module free of exploration output
+- [ ] Note: metadata (`outlier_bounds`, `validation_metrics`, `model_feature_columns`, `categories`) is NOT a separable stage from training — outlier bounds are needed *before* fit (train_mask), validation metrics only exist *after* fit. Don't split it into its own workflow/notebook; it stays a byproduct of the training run. Ruled out this option when considering the training/inference notebook split.
 - [ ] Does data/model need its own top-level module (vs current training/inference/common)?
 - [ ] Seed pinning for training reproducibility (model + train/test split)
 - [ ] Pin dependency/environment versions (dev/prod parity)
