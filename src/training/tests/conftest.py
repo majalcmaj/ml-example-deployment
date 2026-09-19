@@ -2,11 +2,11 @@ import shutil
 from pathlib import Path
 
 import pytest
-from testkit.notebooks import run_notebook
+from testkit.runner import run_script
 
 MEMBER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = MEMBER_ROOT.parents[1]
-NOTEBOOK_PATH = MEMBER_ROOT / "training" / "daily_product_demand_forecast.ipynb"
+SCRIPT_PATH = MEMBER_ROOT / "training" / "daily_product_demand_forecast.py"
 
 
 @pytest.fixture(scope="session")
@@ -18,7 +18,7 @@ def run_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
     monkeypatch.setenv("TRAINING_DATA_DIR", str(root / "data"))
     monkeypatch.setenv("TRAINING_OUTPUT_DIR", str(root / "outputs"))
     try:
-        run_notebook(NOTEBOOK_PATH, cwd=root)
+        run_script(SCRIPT_PATH, cwd=root)
     finally:
         monkeypatch.undo()
 
