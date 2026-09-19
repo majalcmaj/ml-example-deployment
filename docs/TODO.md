@@ -18,6 +18,22 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
 
 **P1**
+- [ ] Workspace-level train→infer integration e2e test (uv-workspace split follow-up): the
+  per-member e2e suites (`src/inference/tests`, `src/training/tests`) are hermetic — each
+  compares against its own committed baseline (`forecast_metadata.joblib`,
+  `xgb_daily_product_demand.json`, prediction CSVs), independently of the other member. This
+  makes `inference`'s test pass even if its baseline model has gone stale relative to
+  `training`'s current code, because nothing currently re-derives inference's baseline from a
+  fresh training run as part of CI — a dev has to remember to run `make baseline-inference`
+  whenever training-side logic (features, hyperparams, notebook) changes, and nothing flags it
+  if they forget. Add one additional test, living outside both `src/inference` and
+  `src/training` (e.g. `tests/integration/`, using `testkit` like the old pre-split regression
+  suite did), that runs train → assert → feeds that freshly-trained model straight into
+  inference → assert, with no committed model baseline — only that flow proves inference is
+  still correct against training's *current* output. This needs the full workspace synced
+  (both members installed together), so it can't run as part of the `make sync-inference`
+  deploy-subset check; it's a slower dev/CI-only safety net layered on top of the per-member
+  suites, not a replacement for them.
 - [ ] Categorical feature drift: alert on unknown/unseen category values
 - [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file)
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
