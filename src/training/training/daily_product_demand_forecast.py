@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # # Next-day product demand forecast
 #
 #
@@ -83,15 +81,15 @@ VALIDATION_DAYS = 30
 
 log.info(raw_sales.head())
 
-log.info("Shape:", raw_sales.shape)
+log.info("Shape: %s", raw_sales.shape)
 
-log.info("Columns:", raw_sales.columns.tolist())
+log.info("Columns: %s", raw_sales.columns.tolist())
 
 log.info(raw_sales.dtypes.rename("dtype").to_frame())
 
 log.info(raw_sales.isna().sum().rename("missing_values").to_frame())
 
-log.info("Exact duplicate rows:", raw_sales.duplicated().sum())
+log.info("Exact duplicate rows: %s", raw_sales.duplicated().sum())
 
 log.info(raw_sales.describe(include="all").transpose())
 
@@ -353,7 +351,7 @@ log.info(
     f"Validation: {validation_data[DATE_COLUMN].min().date()} to {validation_data[DATE_COLUMN].max().date()}, {len(validation_data):,} rows"
 )
 
-log.info("Model features:", X_train.shape[1])
+log.info("Model features: %s", X_train.shape[1])
 
 
 # ## 9. Train the XGBoost model
@@ -510,7 +508,7 @@ next_day_forecast = next_day_forecast.sort_values(
 
 log.info(next_day_forecast)
 
-log.info("Predicted total units:", next_day_forecast["Predicted_Qty"].sum())
+log.info("Predicted total units: %s", next_day_forecast["Predicted_Qty"].sum())
 
 
 # ## 12. Save predictions and model artifacts
@@ -559,7 +557,7 @@ artifacts = {
 joblib.dump(artifacts, metadata_path)
 
 
-log.info("Saved predictions:", prediction_path)
-log.info("Saved XGBoost model:", model_path)
-log.info("Saved metadata:", metadata_path)
+log.info("Saved predictions: %s", prediction_path)
+log.info("Saved XGBoost model: %s", model_path)
+log.info("Saved metadata: %s", metadata_path)
 log.info(artifacts)

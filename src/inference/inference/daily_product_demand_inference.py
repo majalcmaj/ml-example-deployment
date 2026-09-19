@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # # Daily product demand inference
 #
 #
@@ -19,11 +17,10 @@
 # In[1]:
 
 
-
-
 import joblib
 import numpy as np
 import pandas as pd
+import requests
 from common.context import init_context
 from xgboost import XGBRegressor
 
@@ -102,7 +99,7 @@ log.info(
 # In[3]:
 
 
-def get_api_token():
+def get_api_token() -> str:
 
     if CONFIG.simulation_mode:
         return "simulation-token"
@@ -372,7 +369,7 @@ else:
     log.info("Forecast POST status: %d", response.status_code)
 
 
-outbound_result
+log.info(outbound_result)
 
 
 # In[8]:
