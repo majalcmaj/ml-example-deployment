@@ -59,8 +59,8 @@ that mechanism intact when touching config.
 ## Known drift / gotchas
 
 - The `.py` scripts are `nbconvert` exports of the `.ipynb` next to them (cell markers `# In[n]:`
-  kept). Tests run the **scripts**; the notebooks still exist. Keep both in sync if editing either,
-  and keep notebook edits minimal.
+  kept). Tests run the **scripts**; the notebooks still exist. Do not edit the notebooks, you may check 
+  them for context.
 - `make baseline-inference` runs the training script at repo root, copies model + metadata into
   inference's baseline dir, then runs `make test-inference`.
 - `outputs/` is gitignored; `data/coffeeshop_daily_sales_report.csv` is the only input and is committed.

@@ -10,7 +10,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] Regression tests
 - [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks
 - [ ] Unit tests: feature extraction correctness
-- [ ] Integration tests: model output shape/columns against prepared data
+- [x] Integration tests: model output shape/columns against prepared data
 - [ ] End-to-end tests: full pipeline against Docker Compose mocks
 - [ ] Auto-generate data schema/contract at training time, version with model artifact, validate on both train + inference
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
