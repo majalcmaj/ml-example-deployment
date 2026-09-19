@@ -1,8 +1,8 @@
 # testkit
 
 Shared e2e test helpers for the workspace members. Each member (`inference`, `training`) has its
-own `src/<member>/tests/` suite: every test runs its notebook end-to-end via
-`testkit.notebooks.run_notebook` (cwd = a tmp dir seeded with `data/` and, for `inference`, a
+own `src/<member>/tests/` suite: every test runs its script end-to-end via
+`testkit.runner.run_script` (cwd = a tmp dir seeded with `data/` and, for `inference`, a
 seeded `outputs/`) and diffs the artifacts it writes against a frozen copy in
 `src/<member>/tests/baseline/`.
 
@@ -16,11 +16,11 @@ make test-training        # training only
 
 ## Artifact map
 
-| notebook | writes | compared against |
+| script | writes | compared against |
 |---|---|---|
-| `src/training/training/daily_product_demand_forecast.ipynb` | `next_day_product_forecast.csv` | `src/training/tests/baseline/next_day_product_forecast.csv` |
-| `src/training/training/daily_product_demand_forecast.ipynb` | `forecast_metadata.joblib` | `src/training/tests/baseline/forecast_metadata.joblib` |
-| `src/inference/inference/daily_product_demand_inference.ipynb` | `inference_next_day_forecast.csv` | `src/inference/tests/baseline/inference_next_day_forecast.csv` |
+| `src/training/training/daily_product_demand_forecast.py` | `next_day_product_forecast.csv` | `src/training/tests/baseline/next_day_product_forecast.csv` |
+| `src/training/training/daily_product_demand_forecast.py` | `forecast_metadata.joblib` | `src/training/tests/baseline/forecast_metadata.joblib` |
+| `src/inference/inference/daily_product_demand_inference.py` | `inference_next_day_forecast.csv` | `src/inference/tests/baseline/inference_next_day_forecast.csv` |
 
 `xgb_daily_product_demand.json` (the native XGBoost model dump) is **not** diffed directly — it's
 a serialization of the fitted model, not a stable contract; `forecast_metadata.joblib`'s
@@ -36,7 +36,7 @@ a serialization of the fitted model, not a stable contract; `forecast_metadata.j
 
 ## Refreshing a baseline after an intentional change
 
-1. Make the reviewed change to the notebook(s).
+1. Make the reviewed change to the script(s).
 2. Run the affected member's suite once (`make test-inference` / `make test-training`) to
    regenerate its tmp `outputs/`.
 3. Diff the tmp `outputs/*` against `src/<member>/tests/baseline/*` by hand and confirm the
