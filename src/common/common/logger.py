@@ -1,5 +1,6 @@
-from logging import Logger, LoggerAdapter, getLogger, StreamHandler, Formatter, INFO
-from context import CORRELATION_ID
+from logging import INFO, Formatter, Logger, LoggerAdapter, StreamHandler, getLogger
+
+from common.context import CORRELATION_ID
 
 
 def get_logger(name: str) -> LoggerAdapter[Logger]:

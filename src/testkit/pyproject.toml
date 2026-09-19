@@ -1,0 +1,19 @@
+[project]
+name = "testkit"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "pytest>=9.1.0",
+    "nbclient>=0.10",
+    "nbformat>=5.10",
+    "ipykernel",
+    "pandas",
+    "joblib",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.0,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""

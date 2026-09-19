@@ -1,6 +1,11 @@
-import pandas as pd
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def create_time_features(data: pd.DataFrame) -> pd.DataFrame:
@@ -16,11 +21,11 @@ def create_time_features(data: pd.DataFrame) -> pd.DataFrame:
 
     for window in [7, 14, 28]:
         featured[f"Rolling_Mean_{window}"] = grouped_sales.transform(
-            lambda values: values.shift(1).rolling(window).mean()
+            lambda values, window=window: values.shift(1).rolling(window).mean()
         )
 
         featured[f"Rolling_Std_{window}"] = grouped_sales.transform(
-            lambda values: values.shift(1).rolling(window).std()
+            lambda values, window=window: values.shift(1).rolling(window).std()
         )
 
     return featured
