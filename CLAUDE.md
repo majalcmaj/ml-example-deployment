@@ -18,17 +18,10 @@ Dependency direction: `training` and `inference` → `common`; `testkit` is a de
 
 ## Commands
 
+Run `make` with no arguments to list all targets with descriptions (descriptions live on the
+target lines in `Makefile` as `## ...` comments — keep them updated when adding targets).
+
 ```
-make sync              # uv sync — full workspace + dev tools
-make check             # ruff check + full test suite
-make test              # uv run pytest (all 13 tests, testpaths = src)
-make test-unit         # uv run pytest -m "not e2e"
-make test-e2e          # uv run pytest -m e2e
-make test-inference    # uv run --package inference pytest src/inference
-make test-training     # uv run --package training pytest src/training
-make test-mutation     # scripts/mutation_check.sh — proves e2e suites catch regressions
-make build             # uv build --all-packages
-make sync-inference    # uv sync --package inference --no-dev  (deploy-subset check)
 uv run ruff check      # lint (ruff config in root pyproject; *.ipynb excluded)
 uv run pytest src/common/common/features_test.py::test_is_weekend_flags_saturday_and_sunday   # single test
 ```
