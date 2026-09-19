@@ -12,3 +12,6 @@ wheels/
 
 # Model, params
 outputs/
+
+# Agent stuff
+.claude
