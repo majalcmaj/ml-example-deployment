@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # # Next-day product demand forecast
 #
@@ -20,22 +19,15 @@
 # In[1]:
 
 
-import importlib.util
-import subprocess
-import sys
-from pathlib import Path
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
-
 import pandas as pd
-
+from common.consts import CATEGORY_COLUMN, DATE_COLUMN, REQUIRED_COLUMNS, TARGET_COLUMN
+from common.logger import get_logger
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-
 from xgboost import XGBRegressor
 
-from common.consts import DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN, REQUIRED_COLUMNS
-from common.logger import get_logger
 from training.config import CONFIG
 
 log = get_logger(__name__)

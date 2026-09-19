@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # # Daily product demand inference
 #
@@ -20,25 +19,17 @@
 # In[1]:
 
 
-import os
 
-from pathlib import Path
 
 import joblib
-
 import numpy as np
-
 import pandas as pd
-
+from common.context import init_context
 from xgboost import XGBRegressor
 
-import sys
-
-from inference.config import CONFIG
-from common.context import init_context
-from inference.http_session import create_http_session
 from common import logger
-
+from inference.config import CONFIG
+from inference.http_session import create_http_session
 
 init_context()
 log = logger.get_logger(__name__)
