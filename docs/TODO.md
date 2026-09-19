@@ -46,6 +46,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Note: metadata (`outlier_bounds`, `validation_metrics`, `model_feature_columns`, `categories`) is NOT a separable stage from training — outlier bounds are needed *before* fit (train_mask), validation metrics only exist *after* fit. Don't split it into its own workflow/notebook; it stays a byproduct of the training run. Ruled out this option when considering the training/inference notebook split.
 - [ ] Does data/model need its own top-level module (vs current training/inference/common)?
 - [ ] Seed pinning for training reproducibility (model + train/test split)
+- [ ] Clean up `scripts/ast_similarity.py` (quick AST clone finder for training vs inference scripts): drop single-line/weight heuristics for something principled (e.g. min fingerprint length), add `argparse`, consider `--json` output; or delete it once the shared-feature-extraction P0 item lands and it has served its purpose
 - [ ] Pin dependency/environment versions (dev/prod parity)
 
 ## Deliverable 2: Solution design doc

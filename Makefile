@@ -53,3 +53,7 @@ baseline-inference:
 	uv run python3 src/training/training/daily_product_demand_forecast.py
 	cp outputs/xgb_daily_product_demand.json outputs/forecast_metadata.joblib src/inference/tests/baseline/
 	$(MAKE) test-inference
+
+# TODO: remove
+.PHONY: code-duplication-check
+	uv run scripts/ast_similarity.py src/inference/inference/daily_product_demand_inference.py src/training/training/daily_product_demand_forecast.py
