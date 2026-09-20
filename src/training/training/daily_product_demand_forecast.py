@@ -17,11 +17,11 @@
 # In[1]:
 
 
-import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from common.forecast_metadata import ForecastMetadata, ModelConfiguration
 from common.logger import get_logger
 from common.preprocessing import (
     aggregate_per_category,
@@ -519,25 +519,25 @@ next_day_forecast.to_csv(prediction_path, index=False)
 
 model.save_model(model_path)
 
-artifacts = {
-    "model_feature_columns": X_train.columns.tolist(),
-    "raw_feature_columns": feature_columns,
-    "categories": all_categories,
-    "category_dummy_columns": [
+artifacts = ForecastMetadata(
+    model_feature_columns=X_train.columns.tolist(),
+    raw_feature_columns=feature_columns,
+    categories=all_categories,
+    category_dummy_columns=[
         column for column in X_train.columns if column.startswith(f"{CATEGORY_COLUMN}_")
     ],
-    "configuration": {
-        "date_column": DATE_COLUMN,
-        "category_column": CATEGORY_COLUMN,
-        "target_column": TARGET_COLUMN,
-        "validation_days": VALIDATION_DAYS,
-        "random_seed": RANDOM_SEED,
-    },
-    "outlier_bounds": category_quartiles.reset_index(),
-    "validation_metrics": overall_metrics.to_dict(),
-}
+    configuration=ModelConfiguration(
+        date_column=DATE_COLUMN,
+        category_column=CATEGORY_COLUMN,
+        target_column=TARGET_COLUMN,
+        validation_days=VALIDATION_DAYS,
+        random_seed=RANDOM_SEED,
+    ),
+    outlier_bounds=category_quartiles.reset_index(),
+    validation_metrics=overall_metrics.to_dict(),
+)
 
-joblib.dump(artifacts, metadata_path)
+artifacts.save(metadata_path)
 
 
 log.info("Saved predictions: %s", prediction_path)

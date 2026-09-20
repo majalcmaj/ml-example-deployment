@@ -374,12 +374,14 @@ name = "common"
 version = "0.1.0"
 source = { editable = "src/common" }
 dependencies = [
+    { name = "joblib" },
     { name = "pandas" },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "joblib", specifier = ">=1.6.0" },
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydantic", specifier = ">=2.13.5" },
 ]
@@ -596,7 +598,6 @@ version = "0.1.0"
 source = { editable = "src/inference" }
 dependencies = [
     { name = "common" },
-    { name = "joblib" },
     { name = "pandas" },
     { name = "pydantic" },
     { name = "requests" },
@@ -612,7 +613,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "common", editable = "src/common" },
-    { name = "joblib", specifier = ">=1.6.0" },
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "requests", specifier = ">=2.32" },

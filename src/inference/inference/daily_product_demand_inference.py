@@ -17,11 +17,11 @@
 # In[1]:
 
 
-import joblib
 import numpy as np
 import pandas as pd
 from common.context import init_context
 from common.features import create_time_features
+from common.forecast_metadata import ForecastMetadata
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -58,23 +58,17 @@ if not metadata_path.exists():
     raise FileNotFoundError(f"The metadata is missing from {ARTIFACT_DIR}.")
 
 
-artifacts = joblib.load(metadata_path)
-configuration = artifacts["configuration"]
-DATE_COLUMN = configuration["date_column"]
-CATEGORY_COLUMN = configuration["category_column"]
-TARGET_COLUMN = configuration["target_column"]
-MODEL_COLUMNS = artifacts["model_feature_columns"]
-KNOWN_CATEGORIES = artifacts["categories"]
+a = ForecastMetadata.load(metadata_path)
+c = a.configuration
 
 log.info(
     "Loaded model contract with %s features and %s categories.",
-    len(MODEL_COLUMNS),
-    len(KNOWN_CATEGORIES),
+    len(a.model_feature_columns),
+    len(a.categories),
 )
 
 
 # Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features.
-
 
 source_payload = sales_gateway.fetch_source_payload()
 recent_sales = payload_to_dataframe(source_payload)
@@ -83,31 +77,33 @@ validate_required_columns_present(recent_sales)
 recent_sales = columns_to_expected_types(recent_sales)
 
 valid_rows = get_valid_date_target_array(recent_sales)
-valid_rows &= recent_sales[CATEGORY_COLUMN].isin(KNOWN_CATEGORIES)
+valid_rows &= recent_sales[c.category_column].isin(a.categories)
 
 recent_sales = recent_sales.loc[
-    valid_rows, [DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN]
+    valid_rows, [c.date_column, c.category_column, c.target_column]
 ]
 
 daily_sales = (
-    recent_sales.groupby([DATE_COLUMN, CATEGORY_COLUMN], as_index=False)[TARGET_COLUMN]
+    recent_sales.groupby([c.date_column, c.category_column], as_index=False)[
+        c.target_column
+    ]
     .sum()
-    .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
+    .sort_values([c.category_column, c.date_column])
 )
 
-latest_date = daily_sales[DATE_COLUMN].max()
+latest_date = daily_sales[c.date_column].max()
 
 first_required_date = latest_date - pd.Timedelta(days=27)
 
-if daily_sales[DATE_COLUMN].min() > first_required_date:
+if daily_sales[c.date_column].min() > first_required_date:
     raise ValueError(
         "At least 28 consecutive calendar days of history are required for inference."
     )
 
-all_dates = pd.date_range(daily_sales[DATE_COLUMN].min(), latest_date, freq="D")
+all_dates = pd.date_range(daily_sales[c.date_column].min(), latest_date, freq="D")
 
 complete_index = pd.MultiIndex.from_product(
-    [all_dates, KNOWN_CATEGORIES], names=[DATE_COLUMN, CATEGORY_COLUMN]
+    [all_dates, a.categories], names=[c.date_column, c.category_column]
 )
 daily_sales = aggregate_per_category(complete_index, daily_sales)
 
@@ -115,7 +111,7 @@ log.info(
     "Prepared %d days through %s for %d categories.",
     len(all_dates),
     latest_date.date(),
-    len(KNOWN_CATEGORIES),
+    len(a.categories),
 )
 
 
@@ -132,9 +128,9 @@ forecast_date = latest_date + pd.Timedelta(days=1)
 
 future_rows = pd.DataFrame(
     {
-        DATE_COLUMN: forecast_date,
-        CATEGORY_COLUMN: KNOWN_CATEGORIES,
-        TARGET_COLUMN: 0.0,
+        c.date_column: forecast_date,
+        c.category_column: a.categories,
+        c.target_column: 0.0,
     }
 )
 
@@ -143,17 +139,15 @@ history_and_future = pd.concat([daily_sales, future_rows], ignore_index=True)
 future_features = create_time_features(history_and_future)
 
 future_features = future_features.loc[
-    future_features[DATE_COLUMN] == forecast_date
+    future_features[c.date_column] == forecast_date
 ].copy()
 
 
-feature_columns = artifacts["raw_feature_columns"]
-
 X_future = pd.get_dummies(
-    future_features[feature_columns], columns=[CATEGORY_COLUMN], dtype=int
+    future_features[a.raw_feature_columns], columns=[c.category_column], dtype=int
 )
 
-X_future = X_future.reindex(columns=MODEL_COLUMNS, fill_value=0)
+X_future = X_future.reindex(columns=a.model_feature_columns, fill_value=0)
 
 if X_future.isna().any().any():
     raise ValueError(
@@ -164,11 +158,11 @@ if X_future.isna().any().any():
 model = load_model(ARTIFACT_DIR)
 predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(int)
 
-forecast = future_features[[DATE_COLUMN, CATEGORY_COLUMN]].copy()
+forecast = future_features[[c.date_column, c.category_column]].copy()
 
 forecast["Predicted_Qty"] = predicted_quantities
 
-forecast = forecast.sort_values(CATEGORY_COLUMN).reset_index(drop=True)
+forecast = forecast.sort_values(c.category_column).reset_index(drop=True)
 
 log.info(forecast)
 
@@ -190,7 +184,7 @@ result_payload = {
     "generated_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
     "predictions": [
         {
-            "category": row[CATEGORY_COLUMN],
+            "category": row[c.category_column],
             "predicted_quantity": int(row["Predicted_Qty"]),
         }
         for _, row in forecast.iterrows()
@@ -201,6 +195,6 @@ result_payload = {
 sales_gateway.upload_inference_results(result_payload)
 
 
-forecast[[CATEGORY_COLUMN, "Predicted_Qty"]].to_csv(
+forecast[[c.category_column, "Predicted_Qty"]].to_csv(
     CONFIG.output_dir / "inference_next_day_forecast.csv", index=False
 )
