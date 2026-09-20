@@ -20,7 +20,6 @@
 import joblib
 import numpy as np
 import pandas as pd
-import requests
 from common.context import init_context
 from common.preprocessing import (
     aggregate_per_category,
@@ -32,12 +31,10 @@ from xgboost import XGBRegressor
 
 from common import logger
 from inference.config import CONFIG
-from inference.http_session import create_http_session
 
 init_context()
 log = logger.get_logger(__name__)
-
-http = create_http_session()
+from inference.remote import fetch_source_payload, upload_inference_results
 
 log.info("Simulation mode: %s", CONFIG.simulation_mode)
 log.info("Requested history days: %s", CONFIG.history_days)
@@ -50,7 +47,6 @@ log.info("Requested history days: %s", CONFIG.history_days)
 # Load the XGBoost model and metadata written by the training notebook. Metadata controls category names and exact feature ordering.
 
 # In[2]:
-
 
 ARTIFACT_DIR = CONFIG.artifact_dir
 
@@ -105,30 +101,6 @@ log.info(
 # In[3]:
 
 
-def get_api_token() -> str:
-
-    if CONFIG.simulation_mode:
-        return "simulation-token"
-
-    try:
-        return dbutils.secrets.get(
-            scope=CONFIG.secret_scope,
-            key=CONFIG.secret_key,
-        )
-
-    except NameError as error:
-        raise RuntimeError("Real API mode requires Databricks Secrets.") from error
-
-
-api_token = get_api_token()
-
-request_headers = {
-    "Authorization": f"Bearer {api_token}",
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-}
-
-
 if CONFIG.simulation_mode:
     data_directory = CONFIG.data_dir
 
@@ -158,17 +130,7 @@ if CONFIG.simulation_mode:
     log.info("Simulated GET returned %d JSON records.", len(source_payload["records"]))
 
 else:
-    response = http.get(
-        CONFIG.source_endpoint_url,
-        headers=request_headers,
-        params={"history_days": CONFIG.history_days},
-    )
-
-    response.raise_for_status()
-
-    source_payload = response.json()
-
-    log.info("Recent-sales GET status: %s", response.status_code)
+    source_payload = fetch_source_payload()
 
 
 # ## 4. Validate and preprocess the JSON response
@@ -330,32 +292,7 @@ if CONFIG.simulation_mode:
     log.info(pd.DataFrame(result_payload["predictions"]))
 
 else:
-    response = http.post(
-        CONFIG.result_endpoint_url,
-        headers=request_headers,
-        json=result_payload,
-    )
-
-    response.raise_for_status()
-
-    try:
-        response_body = response.json()
-
-    except requests.exceptions.JSONDecodeError:
-        response_body = response.text
-
-    outbound_result = {
-        "status_code": response.status_code,
-        "response": response_body,
-    }
-
-    log.info("Forecast POST status: %d", response.status_code)
-
-
-log.info(outbound_result)
-
-
-# In[8]:
+    upload_inference_results(result_payload)
 
 
 forecast[[CATEGORY_COLUMN, "Predicted_Qty"]].to_csv(
