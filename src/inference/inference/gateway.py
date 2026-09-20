@@ -1,8 +1,8 @@
 from typing import Protocol
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
-import pandas as pd
 
+import pandas as pd
 import requests
+from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 
 from common import logger
 from inference.config import CONFIG, Config
