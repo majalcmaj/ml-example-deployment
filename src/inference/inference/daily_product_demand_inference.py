@@ -21,6 +21,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from common.context import init_context
+from common.features import create_time_features
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -31,6 +32,7 @@ from xgboost import XGBRegressor
 
 from common import logger
 from inference.config import CONFIG
+from inference.preprocess import payload_to_dataframe
 
 init_context()
 log = logger.get_logger(__name__)
@@ -110,23 +112,7 @@ source_payload = sales_gateway.fetch_source_payload()
 
 # In[4]:
 
-
-if isinstance(source_payload, list):
-    source_records = source_payload
-
-elif isinstance(source_payload, dict):
-    source_records = source_payload.get("records", source_payload.get("data"))
-
-else:
-    source_records = None
-
-if not isinstance(source_records, list) or not source_records:
-    raise ValueError(
-        "The recent-sales endpoint must return a non-empty JSON record list."
-    )
-
-recent_sales = pd.DataFrame.from_records(source_records)
-
+recent_sales = payload_to_dataframe(source_payload)
 
 # In[10]:
 
@@ -178,8 +164,6 @@ log.info(
 
 # In[6]:
 
-
-from common.features import create_time_features
 
 forecast_date = latest_date + pd.Timedelta(days=1)
 
