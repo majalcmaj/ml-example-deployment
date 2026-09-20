@@ -66,7 +66,6 @@ TARGET_COLUMN = configuration["target_column"]
 MODEL_COLUMNS = artifacts["model_feature_columns"]
 KNOWN_CATEGORIES = artifacts["categories"]
 
-
 log.info(
     "Loaded model contract with %s features and %s categories.",
     len(MODEL_COLUMNS),
@@ -74,18 +73,6 @@ log.info(
 )
 
 
-# ## 3. Query the recent-sales endpoint
-#
-#
-#
-# Real mode sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. Simulation mode creates the same payload from the latest bundled CSV records. The endpoint must supply at least 28 calendar days of history.
-
-# In[3]:
-
-# ## 4. Validate and preprocess the JSON response
-#
-#
-#
 # Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features.
 
 

@@ -17,6 +17,7 @@ class SalesGateway(Protocol):
 
 
 def make_gateway(config: Config) -> SalesGateway:
+    """Real mode sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. Simulation mode creates the same payload from the latest bundled CSV records. The endpoint must supply at least 28 calendar days of history."""
     if config.simulation_mode:
         return _SimulatedGateway()
     return _RestGateway(create_http_session())
@@ -62,9 +63,7 @@ class _RestGateway:
             headers=_request_headers(),
             json=result_payload,
         )
-
         response.raise_for_status()
-
         try:
             response_body = response.json()
 
