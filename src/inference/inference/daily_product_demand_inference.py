@@ -28,10 +28,10 @@ from common.preprocessing import (
     get_valid_date_target_array,
     validate_required_columns_present,
 )
-from xgboost import XGBRegressor
 
 from common import logger
 from inference.config import CONFIG
+from inference.model_loader import load_model
 from inference.preprocess import payload_to_dataframe
 
 init_context()
@@ -43,14 +43,6 @@ log.info("Requested history days: %s", CONFIG.history_days)
 
 sales_gateway = make_gateway(CONFIG)
 
-# ## 2. Load the trained model contract
-#
-#
-#
-# Load the XGBoost model and metadata written by the training notebook. Metadata controls category names and exact feature ordering.
-
-# In[2]:
-
 ARTIFACT_DIR = CONFIG.artifact_dir
 
 if not ARTIFACT_DIR.exists():
@@ -59,34 +51,21 @@ if not ARTIFACT_DIR.exists():
     )
 
 
-model_path = ARTIFACT_DIR / "xgb_daily_product_demand.json"
+# Metadata controls category names and exact feature ordering.
 
 metadata_path = ARTIFACT_DIR / "forecast_metadata.joblib"
-
-if not model_path.exists() or not metadata_path.exists():
-    raise FileNotFoundError(
-        "The trained model or forecast metadata is missing from outputs/."
-    )
+if not metadata_path.exists():
+    raise FileNotFoundError(f"The metadata is missing from {ARTIFACT_DIR}.")
 
 
 artifacts = joblib.load(metadata_path)
-
 configuration = artifacts["configuration"]
-
 DATE_COLUMN = configuration["date_column"]
-
 CATEGORY_COLUMN = configuration["category_column"]
-
 TARGET_COLUMN = configuration["target_column"]
-
 MODEL_COLUMNS = artifacts["model_feature_columns"]
-
 KNOWN_CATEGORIES = artifacts["categories"]
 
-
-model = XGBRegressor()
-
-model.load_model(model_path)
 
 log.info(
     "Loaded model contract with %s features and %s categories.",
@@ -102,7 +81,6 @@ log.info(
 # Real mode sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. Simulation mode creates the same payload from the latest bundled CSV records. The endpoint must supply at least 28 calendar days of history.
 
 # In[3]:
-source_payload = sales_gateway.fetch_source_payload()
 
 # ## 4. Validate and preprocess the JSON response
 #
@@ -110,11 +88,9 @@ source_payload = sales_gateway.fetch_source_payload()
 #
 # Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features.
 
-# In[4]:
 
+source_payload = sales_gateway.fetch_source_payload()
 recent_sales = payload_to_dataframe(source_payload)
-
-# In[10]:
 
 validate_required_columns_present(recent_sales)
 recent_sales = columns_to_expected_types(recent_sales)
@@ -198,6 +174,7 @@ if X_future.isna().any().any():
     )
 
 
+model = load_model(ARTIFACT_DIR)
 predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(int)
 
 forecast = future_features[[DATE_COLUMN, CATEGORY_COLUMN]].copy()
