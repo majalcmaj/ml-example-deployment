@@ -30,3 +30,16 @@ def get_valid_date_target_array(sales: pd.DataFrame) -> pd.DataFrame:
         & sales[TARGET_COLUMN].notna()
         & sales[TARGET_COLUMN].ge(0)
     )
+
+
+def aggregate_per_category(
+    complete_index: pd.MultiIndex, daily_sales: pd.DataFrame
+) -> pd.DataFrame:
+
+    return (
+        daily_sales.set_index([DATE_COLUMN, CATEGORY_COLUMN])
+        .reindex(complete_index, fill_value=0)
+        .reset_index()
+        .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
+        .reset_index(drop=True)
+    )

@@ -23,6 +23,7 @@ import pandas as pd
 import requests
 from common.context import init_context
 from common.preprocessing import (
+    aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
     validate_required_columns_present,
@@ -208,10 +209,11 @@ recent_sales = recent_sales.loc[
     valid_rows, [DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN]
 ]
 
-daily_sales = recent_sales.groupby([DATE_COLUMN, CATEGORY_COLUMN], as_index=False)[
-    TARGET_COLUMN
-].sum()
-
+daily_sales = (
+    recent_sales.groupby([DATE_COLUMN, CATEGORY_COLUMN], as_index=False)[TARGET_COLUMN]
+    .sum()
+    .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
+)
 
 latest_date = daily_sales[DATE_COLUMN].max()
 
@@ -222,19 +224,12 @@ if daily_sales[DATE_COLUMN].min() > first_required_date:
         "At least 28 consecutive calendar days of history are required for inference."
     )
 
-
 all_dates = pd.date_range(daily_sales[DATE_COLUMN].min(), latest_date, freq="D")
 
 complete_index = pd.MultiIndex.from_product(
     [all_dates, KNOWN_CATEGORIES], names=[DATE_COLUMN, CATEGORY_COLUMN]
 )
-
-daily_sales = (
-    daily_sales.set_index([DATE_COLUMN, CATEGORY_COLUMN])
-    .reindex(complete_index, fill_value=0)
-    .reset_index()
-    .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
-)
+daily_sales = aggregate_per_category(complete_index, daily_sales)
 
 log.info(
     "Prepared %d days through %s for %d categories.",

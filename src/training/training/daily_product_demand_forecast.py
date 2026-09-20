@@ -24,6 +24,7 @@ import pandas as pd
 from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 from common.logger import get_logger
 from common.preprocessing import (
+    aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
     validate_required_columns_present,
@@ -146,25 +147,17 @@ daily_sales = (
     .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
 )
 
-
+all_categories = sorted(daily_sales[CATEGORY_COLUMN].unique())
 all_dates = pd.date_range(
     daily_sales[DATE_COLUMN].min(), daily_sales[DATE_COLUMN].max(), freq="D"
 )
 
-all_categories = sorted(daily_sales[CATEGORY_COLUMN].unique())
 
 complete_index = pd.MultiIndex.from_product(
     [all_dates, all_categories], names=[DATE_COLUMN, CATEGORY_COLUMN]
 )
 
-daily_sales = (
-    daily_sales.set_index([DATE_COLUMN, CATEGORY_COLUMN])
-    .reindex(complete_index, fill_value=0)
-    .reset_index()
-    .sort_values([CATEGORY_COLUMN, DATE_COLUMN])
-    .reset_index(drop=True)
-)
-
+daily_sales = aggregate_per_category(complete_index, daily_sales)
 
 log.info(
     f"Complete panel: {len(all_dates)} days x {len(all_categories)} categories = {len(daily_sales):,} rows"
