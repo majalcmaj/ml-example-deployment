@@ -22,7 +22,10 @@ import numpy as np
 import pandas as pd
 import requests
 from common.context import init_context
-from common.preprocessing import validate_required_columns_present
+from common.preprocessing import (
+    columns_to_expected_types,
+    validate_required_columns_present,
+)
 from xgboost import XGBRegressor
 
 from common import logger
@@ -195,21 +198,7 @@ recent_sales = pd.DataFrame.from_records(source_records)
 # In[10]:
 
 validate_required_columns_present(recent_sales)
-required_columns = {DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN}
-missing_columns = required_columns.difference(recent_sales.columns)
-if missing_columns:
-    raise ValueError(f"Recent-sales JSON is missing columns: {sorted(missing_columns)}")
-
-recent_sales[DATE_COLUMN] = pd.to_datetime(recent_sales[DATE_COLUMN], errors="coerce")
-recent_sales[CATEGORY_COLUMN] = (
-    recent_sales[CATEGORY_COLUMN]
-    .astype("string")
-    .str.strip()
-    .str.replace(r"\s+", " ", regex=True)
-)
-recent_sales[TARGET_COLUMN] = pd.to_numeric(
-    recent_sales[TARGET_COLUMN], errors="coerce"
-)
+recent_sales = columns_to_expected_types(recent_sales)
 
 valid_rows = (
     recent_sales[DATE_COLUMN].notna()

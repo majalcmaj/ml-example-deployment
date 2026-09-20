@@ -23,7 +23,10 @@ import numpy as np
 import pandas as pd
 from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 from common.logger import get_logger
-from common.preprocessing import validate_required_columns_present
+from common.preprocessing import (
+    columns_to_expected_types,
+    validate_required_columns_present,
+)
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from xgboost import XGBRegressor
 
@@ -110,14 +113,8 @@ unnamed_columns = [
     column for column in sales.columns if column.lower().startswith("unnamed:")
 ]
 sales = sales.drop(columns=unnamed_columns)
-sales[DATE_COLUMN] = pd.to_datetime(sales[DATE_COLUMN], errors="coerce")
-sales[TARGET_COLUMN] = pd.to_numeric(sales[TARGET_COLUMN], errors="coerce")
-sales[CATEGORY_COLUMN] = (
-    sales[CATEGORY_COLUMN]
-    .astype("string")
-    .str.strip()
-    .str.replace(r"\s+", " ", regex=True)
-)
+
+sales = columns_to_expected_types(sales)
 
 rows_before = len(sales)
 
