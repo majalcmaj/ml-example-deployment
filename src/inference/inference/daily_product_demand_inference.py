@@ -34,11 +34,12 @@ from inference.config import CONFIG
 
 init_context()
 log = logger.get_logger(__name__)
-from inference.remote import fetch_source_payload, upload_inference_results
+from inference.gateway import make_gateway
 
 log.info("Simulation mode: %s", CONFIG.simulation_mode)
 log.info("Requested history days: %s", CONFIG.history_days)
 
+sales_gateway = make_gateway(CONFIG)
 
 # ## 2. Load the trained model contract
 #
@@ -99,39 +100,7 @@ log.info(
 # Real mode sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. Simulation mode creates the same payload from the latest bundled CSV records. The endpoint must supply at least 28 calendar days of history.
 
 # In[3]:
-
-
-if CONFIG.simulation_mode:
-    data_directory = CONFIG.data_dir
-
-    if not data_directory.exists():
-        raise FileNotFoundError("Simulation mode requires the bundled data directory.")
-
-    source_frames = [pd.read_csv(path) for path in sorted(data_directory.glob("*.csv"))]
-
-    simulated_sales = pd.concat(source_frames, ignore_index=True)
-
-    simulated_sales[DATE_COLUMN] = pd.to_datetime(
-        simulated_sales[DATE_COLUMN], errors="coerce"
-    )
-
-    latest_date = simulated_sales[DATE_COLUMN].max()
-
-    recent_sales = simulated_sales.loc[
-        simulated_sales[DATE_COLUMN]
-        >= latest_date - pd.Timedelta(days=CONFIG.history_days - 1),
-        [DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN],
-    ].copy()
-
-    recent_sales[DATE_COLUMN] = recent_sales[DATE_COLUMN].dt.strftime("%Y-%m-%d")
-
-    source_payload = {"records": recent_sales.to_dict(orient="records")}
-
-    log.info("Simulated GET returned %d JSON records.", len(source_payload["records"]))
-
-else:
-    source_payload = fetch_source_payload()
-
+source_payload = sales_gateway.fetch_source_payload()
 
 # ## 4. Validate and preprocess the JSON response
 #
@@ -267,6 +236,7 @@ log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
 # In[7]:
 
 
+# TODO: pydantic validation
 result_payload = {
     "forecast_date": forecast_date.strftime("%Y-%m-%d"),
     "generated_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
@@ -280,19 +250,7 @@ result_payload = {
 }
 
 
-if CONFIG.simulation_mode:
-    outbound_result = {
-        "simulation": True,
-        "url": CONFIG.result_endpoint_url,
-        "payload": result_payload,
-    }
-
-    log.info("Simulated POST with %d predictions.", len(result_payload["predictions"]))
-
-    log.info(pd.DataFrame(result_payload["predictions"]))
-
-else:
-    upload_inference_results(result_payload)
+sales_gateway.upload_inference_results(result_payload)
 
 
 forecast[[CATEGORY_COLUMN, "Predicted_Qty"]].to_csv(

@@ -16,6 +16,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
 - [ ] Secret → vault abstraction (move off plain TOML field; base config refactor already done per git log)
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
+- [ ] Documentation: Improve readme, add runbooks (e.g. what happens when regression tests break - whether to accept change or investigate), add arch diagram
 
 **P1**
 - [ ] Workspace-level train→infer integration e2e test (uv-workspace split follow-up): the
