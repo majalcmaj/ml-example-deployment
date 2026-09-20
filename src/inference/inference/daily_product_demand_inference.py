@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import requests
 from common.context import init_context
+from common.preprocessing import validate_required_columns_present
 from xgboost import XGBRegressor
 
 from common import logger
@@ -193,7 +194,7 @@ recent_sales = pd.DataFrame.from_records(source_records)
 
 # In[10]:
 
-
+validate_required_columns_present(recent_sales)
 required_columns = {DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN}
 missing_columns = required_columns.difference(recent_sales.columns)
 if missing_columns:

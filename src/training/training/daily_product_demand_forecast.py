@@ -21,8 +21,9 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, REQUIRED_COLUMNS, TARGET_COLUMN
+from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 from common.logger import get_logger
+from common.preprocessing import validate_required_columns_present
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from xgboost import XGBRegressor
 
@@ -102,11 +103,7 @@ log.info(raw_sales.describe(include="all").transpose())
 
 # In[4]:
 
-
-missing_columns = REQUIRED_COLUMNS.difference(raw_sales.columns)
-if missing_columns:
-    raise ValueError(f"Required columns are missing: {sorted(missing_columns)}")
-
+validate_required_columns_present(raw_sales)
 sales = raw_sales.copy()
 
 unnamed_columns = [
