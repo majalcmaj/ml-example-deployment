@@ -25,6 +25,7 @@ from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 from common.logger import get_logger
 from common.preprocessing import (
     columns_to_expected_types,
+    get_valid_date_target_array,
     validate_required_columns_present,
 )
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -113,19 +114,14 @@ unnamed_columns = [
     column for column in sales.columns if column.lower().startswith("unnamed:")
 ]
 sales = sales.drop(columns=unnamed_columns)
-
 sales = columns_to_expected_types(sales)
 
 rows_before = len(sales)
 
 sales = sales.drop_duplicates()
-valid_rows = (
-    sales[DATE_COLUMN].notna()
-    & sales[CATEGORY_COLUMN].notna()
-    & sales[CATEGORY_COLUMN].ne("")
-    & sales[TARGET_COLUMN].notna()
-    & sales[TARGET_COLUMN].ge(0)
-)
+valid_rows = get_valid_date_target_array(sales)
+valid_rows &= sales[CATEGORY_COLUMN].notna() & sales[CATEGORY_COLUMN].ne("")
+
 sales = sales.loc[valid_rows].copy()
 
 log.info(f"Removed {rows_before - len(sales):,} exact duplicate or invalid rows.")

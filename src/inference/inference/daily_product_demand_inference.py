@@ -24,6 +24,7 @@ import requests
 from common.context import init_context
 from common.preprocessing import (
     columns_to_expected_types,
+    get_valid_date_target_array,
     validate_required_columns_present,
 )
 from xgboost import XGBRegressor
@@ -200,12 +201,9 @@ recent_sales = pd.DataFrame.from_records(source_records)
 validate_required_columns_present(recent_sales)
 recent_sales = columns_to_expected_types(recent_sales)
 
-valid_rows = (
-    recent_sales[DATE_COLUMN].notna()
-    & recent_sales[CATEGORY_COLUMN].isin(KNOWN_CATEGORIES)
-    & recent_sales[TARGET_COLUMN].notna()
-    & recent_sales[TARGET_COLUMN].ge(0)
-)
+valid_rows = get_valid_date_target_array(recent_sales)
+valid_rows &= recent_sales[CATEGORY_COLUMN].isin(KNOWN_CATEGORIES)
+
 recent_sales = recent_sales.loc[
     valid_rows, [DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN]
 ]
