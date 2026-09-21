@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from common.forecast_metadata import ForecastMetadata
 
 
-def reconsturct_features(
+def reconstruct_training_features(
     latest_date: pd.Timestamp, metadata: ForecastMetadata, daily_sales: pd.DataFrame
 ) -> tuple[pd.Timestamp, pd.DataFrame, pd.DataFrame]:
     """Append the incoming day and calculate calendar, lag, and rolling features exactly as in training. Align the encoded columns to the stored model contract before predicting."""
