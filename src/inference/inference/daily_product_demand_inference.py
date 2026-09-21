@@ -32,7 +32,6 @@ from inference.gateway import make_gateway
 log.info("Simulation mode: %s", CONFIG.simulation_mode)
 log.info("Requested history days: %s", CONFIG.history_days)
 
-sales_gateway = make_gateway(CONFIG)
 ARTIFACT_DIR = CONFIG.artifact_dir
 if not ARTIFACT_DIR.exists():
     raise FileNotFoundError(
@@ -54,36 +53,54 @@ log.info(
 )
 
 # Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features.
+sales_gateway = make_gateway(CONFIG)
 source_payload = sales_gateway.fetch_source_payload()
 recent_sales = payload_to_dataframe(source_payload)
 validate_required_columns_present(recent_sales)
-recent_sales = columns_to_expected_types(recent_sales)
 
-valid_rows = get_valid_date_target_array(recent_sales)
-valid_rows &= recent_sales[c.category_column].isin(a.categories)
-recent_sales = recent_sales.loc[
-    valid_rows, [c.date_column, c.category_column, c.target_column]
-]
 
-daily_sales = (
-    recent_sales.groupby([c.date_column, c.category_column], as_index=False)[
-        c.target_column
+def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataFrame:
+    model_config = metadata.configuration
+    sales = columns_to_expected_types(sales)
+
+    valid_rows = get_valid_date_target_array(sales)
+    valid_rows &= sales[model_config.category_column].isin(a.categories)
+    sales = sales.loc[
+        valid_rows,
+        [
+            model_config.date_column,
+            model_config.category_column,
+            model_config.target_column,
+        ],
     ]
-    .sum()
-    .sort_values([c.category_column, c.date_column])
-)
-latest_date = daily_sales[c.date_column].max()
-first_required_date = latest_date - pd.Timedelta(days=27)
-if daily_sales[c.date_column].min() > first_required_date:
-    raise ValueError(
-        "At least 28 consecutive calendar days of history are required for inference."
-    )
 
-all_dates = pd.date_range(daily_sales[c.date_column].min(), latest_date, freq="D")
-complete_index = pd.MultiIndex.from_product(
-    [all_dates, a.categories], names=[c.date_column, c.category_column]
-)
-daily_sales = aggregate_per_category(complete_index, daily_sales)
+    daily_sales = (
+        sales.groupby(
+            [model_config.date_column, model_config.category_column], as_index=False
+        )[model_config.target_column]
+        .sum()
+        .sort_values([model_config.category_column, model_config.date_column])
+    )
+    latest_date = daily_sales[model_config.date_column].max()
+    first_required_date = latest_date - pd.Timedelta(days=27)
+    if daily_sales[model_config.date_column].min() > first_required_date:
+        raise ValueError(
+            "At least 28 consecutive calendar days of history are required for inference."
+        )
+
+    all_dates = pd.date_range(
+        daily_sales[model_config.date_column].min(), latest_date, freq="D"
+    )
+    complete_index = pd.MultiIndex.from_product(
+        [all_dates, a.categories],
+        names=[model_config.date_column, model_config.category_column],
+    )
+    daily_sales = aggregate_per_category(complete_index, daily_sales)
+    return all_dates, latest_date, daily_sales
+
+
+all_dates, latest_date, daily_sales = preprocess_data(a, recent_sales)
+
 
 log.info(
     "Prepared %d days through %s for %d categories.",
