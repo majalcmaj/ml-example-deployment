@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from common.context import init_context
 from common.features import create_time_features
-from common.forecast_metadata import ForecastMetadata
+from common.forecast_metadata import ForecastMetadata, ModelConfiguration
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -117,11 +117,18 @@ if X_future.isna().any().any():
         "Recent sales did not provide enough history to calculate every model feature."
     )
 
-model = load_model(ARTIFACT_DIR)
-predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(int)
-forecast = future_features[[c.date_column, c.category_column]].copy()
-forecast["Predicted_Qty"] = predicted_quantities
-forecast = forecast.sort_values(c.category_column).reset_index(drop=True)
+
+def make_forecast(c: ModelConfiguration) -> pd.DataFrame:
+    model = load_model(ARTIFACT_DIR)
+    predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(
+        int
+    )
+    forecast = future_features[[c.date_column, c.category_column]].copy()
+    forecast["Predicted_Qty"] = predicted_quantities
+    return forecast.sort_values(c.category_column).reset_index(drop=True)
+
+
+forecast = make_forecast(c)
 
 log.info(forecast)
 log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
@@ -141,7 +148,6 @@ result_payload = {
         for _, row in forecast.iterrows()
     ],
 }
-
 sales_gateway.upload_inference_results(result_payload)
 
 forecast[[c.category_column, "Predicted_Qty"]].to_csv(
