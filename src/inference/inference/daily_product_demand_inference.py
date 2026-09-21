@@ -1,6 +1,5 @@
-from typing import cast
+from typing import TYPE_CHECKING
 
-import pandas as pd
 from common.context import init_context
 from common.forecast_metadata import ForecastMetadata
 from common.preprocessing import (
@@ -12,25 +11,26 @@ from inference.config import CONFIG
 from inference.features import reconstruct_training_features
 from inference.forecaster import make_forecast
 from inference.preprocess import payload_to_dataframe, preprocess_data
-from inference.result_payload import CategoryPrediction, InferenceResultPayload
+from inference.result_upload import upload_inference_results
 
 init_context()
 from inference.gateway import SalesGateway, make_gateway
 
+if TYPE_CHECKING:
+    import pandas as pd
+
 if __name__ == "__main__":
     log = logger.get_logger(__name__)
-    log.info("Simulation mode: %s", CONFIG.simulation_mode)
-    log.info("Requested history days: %s", CONFIG.history_days)
+    log.info("Running inference with config: %s", CONFIG.model_dump_json(indent=2))
 
-    ARTIFACT_DIR = CONFIG.artifact_dir
-    if not ARTIFACT_DIR.exists():
+    if not CONFIG.artifact_dir.exists():
         raise FileNotFoundError(
             "Could not find outputs/. Run training or deploy the model artifacts first."
         )
 
-    metadata_path = ARTIFACT_DIR / "forecast_metadata.joblib"
+    metadata_path = CONFIG.artifact_dir / "forecast_metadata.joblib"
     if not metadata_path.exists():
-        raise FileNotFoundError(f"The metadata is missing from {ARTIFACT_DIR}.")
+        raise FileNotFoundError(f"The metadata is missing from {CONFIG.artifact_dir}.")
 
     metadata = ForecastMetadata.load(metadata_path)
 
@@ -50,40 +50,15 @@ if __name__ == "__main__":
     validate_required_columns_present(recent_sales)
     all_dates, latest_date, daily_sales = preprocess_data(metadata, recent_sales)
 
-    log.info(
-        "Prepared %d days through %s for %d categories.",
-        len(all_dates),
-        latest_date.date(),
-        len(metadata.categories),
-    )
-
     forecast_date, future_features, X_future = reconstruct_training_features(
         latest_date, metadata, daily_sales
     )
 
     forecast = make_forecast(
-        ARTIFACT_DIR, future_features, X_future, metadata.configuration
+        CONFIG.artifact_dir, future_features, X_future, metadata.configuration
     )
 
-    log.info(forecast)
-    log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
-
-    # ## 6. Return predictions to the result endpoint
-    # Serialize the forecast as JSON and POST it in real mode. Simulation mode displays the request body without contacting an external service.
-
-    result_payload = InferenceResultPayload(
-        forecast_date=forecast_date.date(),
-        generated_at_utc=pd.Timestamp.now(tz="UTC"),
-        predictions=[
-            CategoryPrediction(
-                category=str(row[metadata.configuration.category_column]),
-                predicted_quantity=int(cast("int", row["Predicted_Qty"])),
-            )
-            for _, row in forecast.iterrows()
-        ],
-    )
-
-    sales_gateway.upload_inference_results(result_payload.model_dump(mode="json"))
+    upload_inference_results(sales_gateway, forecast_date, forecast, metadata)
 
     forecast[[metadata.configuration.category_column, "Predicted_Qty"]].to_csv(
         CONFIG.output_dir / "inference_next_day_forecast.csv", index=False

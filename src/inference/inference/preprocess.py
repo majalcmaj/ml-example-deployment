@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
+from common.logger import get_logger
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -35,6 +36,7 @@ def preprocess_data(
     metadata: ForecastMetadata, sales: pd.DataFrame
 ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.DataFrame]:
     """Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features."""
+    log = get_logger(__name__)
     model_config = metadata.configuration
     sales = columns_to_expected_types(sales)
 
@@ -77,4 +79,12 @@ def preprocess_data(
         names=[model_config.date_column, model_config.category_column],
     )
     daily_sales = aggregate_per_category(complete_index, daily_sales)
+
+    log.info(
+        "Prepared %d days through %s for %d categories.",
+        len(all_dates),
+        latest_date.date(),
+        len(metadata.categories),
+    )
+
     return all_dates, latest_date, daily_sales
