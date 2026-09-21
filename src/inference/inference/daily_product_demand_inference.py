@@ -8,6 +8,8 @@
 # Databricks job parameters are exposed as widgets. Credentials are read from Databricks Secrets only when real API mode is enabled.
 
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 from common.context import init_context
@@ -65,7 +67,9 @@ recent_sales = load_data(sales_gateway)
 validate_required_columns_present(recent_sales)
 
 
-def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataFrame:
+def preprocess_data(
+    metadata: ForecastMetadata, sales: pd.DataFrame
+) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.DataFrame]:
     """Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features."""
     model_config = metadata.configuration
     sales = columns_to_expected_types(sales)
@@ -81,14 +85,18 @@ def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataF
         ],
     ]
 
-    daily_sales = (
-        sales.groupby(
-            [model_config.date_column, model_config.category_column], as_index=False
-        )[model_config.target_column]
-        .sum()
-        .sort_values([model_config.category_column, model_config.date_column])
+    target_sums = cast(
+        "pd.Series",
+        sales.groupby([model_config.date_column, model_config.category_column])[
+            model_config.target_column
+        ].sum(),
     )
-    latest_date = daily_sales[model_config.date_column].max()
+    daily_sales = target_sums.reset_index().sort_values(
+        [model_config.category_column, model_config.date_column]
+    )
+    if daily_sales.empty:
+        raise ValueError("No sales history available after filtering to known categories.")
+    latest_date = cast("pd.Timestamp", daily_sales[model_config.date_column].max())
     first_required_date = latest_date - pd.Timedelta(days=27)
     if daily_sales[model_config.date_column].min() > first_required_date:
         raise ValueError(
@@ -119,8 +127,8 @@ log.info(
 
 # ## 5. Reconstruct features and run inference
 # Append the incoming day and calculate calendar, lag, and rolling features exactly as in training. Align the encoded columns to the stored model contract before predicting.
-def reconsturct_features() -> tuple[future_features, X_future]:
-    forecast_date = latest_date + pd.Timedelta(days=1)
+def reconsturct_features() -> tuple[pd.Timestamp, pd.DataFrame, pd.DataFrame]:
+    forecast_date = cast("pd.Timestamp", latest_date + pd.Timedelta(days=1))
     future_rows = pd.DataFrame(
         {
             c.date_column: forecast_date,
@@ -153,7 +161,9 @@ def make_forecast(c: ModelConfiguration) -> pd.DataFrame:
     predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(
         int
     )
-    forecast = future_features[[c.date_column, c.category_column]].copy()
+    forecast = cast(
+        "pd.DataFrame", future_features[[c.date_column, c.category_column]].copy()
+    )
     forecast["Predicted_Qty"] = predicted_quantities
     return forecast.sort_values(c.category_column).reset_index(drop=True)
 
@@ -171,8 +181,8 @@ result_payload = InferenceResultPayload(
     generated_at_utc=pd.Timestamp.now(tz="UTC"),
     predictions=[
         CategoryPrediction(
-            category=row[c.category_column],
-            predicted_quantity=int(row["Predicted_Qty"]),
+            category=str(row[c.category_column]),
+            predicted_quantity=int(cast("int", row["Predicted_Qty"])),
         )
         for _, row in forecast.iterrows()
     ],

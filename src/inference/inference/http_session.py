@@ -7,7 +7,9 @@ from urllib3.util import Retry
 class TimeoutSession(Session):
     def request(self, *arg: object, **kwargs: object) -> Response:
         kwargs.setdefault("timeout", 30)
-        return super().request(*arg, **kwargs)
+        # object -> Session.request's precisely-typed params: ANN401 forbids Any here,
+        # so this passthrough can't be made to satisfy both ruff and pyright at once.
+        return super().request(*arg, **kwargs)  # pyright: ignore[reportArgumentType]
 
 
 def create_http_session() -> Session:

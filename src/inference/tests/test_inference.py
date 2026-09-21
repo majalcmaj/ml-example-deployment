@@ -21,5 +21,7 @@ def test_predictions_match_baseline(run_root: Path) -> None:
 
     assert_columns_equal(actual, expected)
     assert_frame_within_tolerance(
-        actual[["Predicted_Qty"]], expected[["Predicted_Qty"]], atol=PREDICTION_ATOL
+        actual.loc[:, ["Predicted_Qty"]],
+        expected.loc[:, ["Predicted_Qty"]],
+        atol=PREDICTION_ATOL,
     )

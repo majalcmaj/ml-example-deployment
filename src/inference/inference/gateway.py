@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 import pandas as pd
 import requests
@@ -26,7 +26,7 @@ def make_gateway(config: Config) -> SalesGateway:
 def _get_api_token() -> str:
     try:
         # This will fail when not on Databricks - abstract away
-        return dbutils.secrets.get(
+        return dbutils.secrets.get(  # pyright: ignore[reportUndefinedVariable]
             scope=CONFIG.secret_scope,
             key=CONFIG.secret_key,
         )
@@ -46,7 +46,7 @@ class _RestGateway:
     def __init__(self, http: requests.Session) -> None:
         self.http = http
 
-    def fetch_source_payload(self) -> dict[str, any]:
+    def fetch_source_payload(self) -> dict[str, Any]:
         response = self.http.get(
             str(CONFIG.source_endpoint_url),
             headers=_request_headers(),
@@ -57,11 +57,11 @@ class _RestGateway:
         log.info("Recent-sales GET status: %s", response.status_code)
         return source_payload
 
-    def upload_inference_results(self, result_payload: dict) -> None:
+    def upload_inference_results(self, payload: dict) -> None:
         response = self.http.post(
-            CONFIG.result_endpoint_url,
+            str(CONFIG.result_endpoint_url),
             headers=_request_headers(),
-            json=result_payload,
+            json=payload,
         )
         response.raise_for_status()
         try:
@@ -80,7 +80,7 @@ class _RestGateway:
 
 
 class _SimulatedGateway:
-    def fetch_source_payload(self) -> dict[str, any]:
+    def fetch_source_payload(self) -> dict[str, Any]:
         data_directory = CONFIG.data_dir
 
         if not data_directory.exists():

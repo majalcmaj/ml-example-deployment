@@ -13,19 +13,15 @@ def assert_frame_within_tolerance(
     actual_df: pd.DataFrame,
     expected_df: pd.DataFrame,
     *,
-    rtol: float | None = None,
-    atol: float | None = None,
+    rtol: float = 1e-5,
+    atol: float = 1e-8,
 ) -> None:
-    kwargs: dict[str, float] = {}
-    if rtol is not None:
-        kwargs["rtol"] = rtol
-    if atol is not None:
-        kwargs["atol"] = atol
     pd.testing.assert_frame_equal(
         actual_df.reset_index(drop=True),
         expected_df.reset_index(drop=True),
         check_exact=False,
-        **kwargs,
+        rtol=rtol,
+        atol=atol,
     )
 
 

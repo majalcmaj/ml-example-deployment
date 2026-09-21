@@ -54,5 +54,7 @@ def test_predictions_within_tolerance(run_root: Path) -> None:
     actual = pd.read_csv(run_root / "outputs" / "next_day_product_forecast.csv")
     expected = pd.read_csv(BASELINE_DIR / "next_day_product_forecast.csv")
     assert_frame_within_tolerance(
-        actual[["Predicted_Qty"]], expected[["Predicted_Qty"]], atol=PREDICTION_ATOL
+        actual.loc[:, ["Predicted_Qty"]],
+        expected.loc[:, ["Predicted_Qty"]],
+        atol=PREDICTION_ATOL,
     )

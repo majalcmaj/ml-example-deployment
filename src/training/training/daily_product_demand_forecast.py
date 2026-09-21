@@ -7,6 +7,8 @@
 # ## 1. Install and import dependencies
 # The cell installs only missing packages, then imports the libraries used below.
 
+from typing import cast
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -140,7 +142,10 @@ daily_sales["Is_Outlier"] = (
 log.info(f"Training outliers marked for removal: {daily_sales['Is_Outlier'].sum():,}")
 log.info(category_quartiles.head())
 
-plot_category = daily_sales.groupby(CATEGORY_COLUMN)["Is_Outlier"].sum().idxmax()
+category_outlier_counts = cast(
+    "pd.Series", daily_sales.groupby(CATEGORY_COLUMN)["Is_Outlier"].sum()
+)
+plot_category = category_outlier_counts.idxmax()
 plot_data = daily_sales.loc[daily_sales[CATEGORY_COLUMN] == plot_category]
 
 fig, axes = plt.subplots(1, 2, figsize=(14, 4), sharey=True)
