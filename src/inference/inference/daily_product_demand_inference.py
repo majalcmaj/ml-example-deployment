@@ -23,6 +23,7 @@ from common import logger
 from inference.config import CONFIG
 from inference.model_loader import load_model
 from inference.preprocess import payload_to_dataframe
+from inference.result_payload import CategoryPrediction, InferenceResultPayload
 
 init_context()
 log = logger.get_logger(__name__)
@@ -136,19 +137,19 @@ log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
 # ## 6. Return predictions to the result endpoint
 # Serialize the forecast as JSON and POST it in real mode. Simulation mode displays the request body without contacting an external service.
 
-# TODO: pydantic validation
-result_payload = {
-    "forecast_date": forecast_date.strftime("%Y-%m-%d"),
-    "generated_at_utc": pd.Timestamp.now(tz="UTC").isoformat(),
-    "predictions": [
-        {
-            "category": row[c.category_column],
-            "predicted_quantity": int(row["Predicted_Qty"]),
-        }
+result_payload = InferenceResultPayload(
+    forecast_date=forecast_date.date(),
+    generated_at_utc=pd.Timestamp.now(tz="UTC"),
+    predictions=[
+        CategoryPrediction(
+            category=row[c.category_column],
+            predicted_quantity=int(row["Predicted_Qty"]),
+        )
         for _, row in forecast.iterrows()
     ],
-}
-sales_gateway.upload_inference_results(result_payload)
+)
+
+sales_gateway.upload_inference_results(result_payload.model_dump(mode="json"))
 
 forecast[[c.category_column, "Predicted_Qty"]].to_csv(
     CONFIG.output_dir / "inference_next_day_forecast.csv", index=False
