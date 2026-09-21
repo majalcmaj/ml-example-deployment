@@ -13,7 +13,6 @@ from typing import cast
 import numpy as np
 import pandas as pd
 from common.context import init_context
-from common.features import create_time_features
 from common.forecast_metadata import ForecastMetadata, ModelConfiguration
 from common.preprocessing import (
     aggregate_per_category,
@@ -24,6 +23,7 @@ from common.preprocessing import (
 
 from common import logger
 from inference.config import CONFIG
+from inference.features import reconsturct_features
 from inference.model_loader import load_model
 from inference.preprocess import payload_to_dataframe
 from inference.result_payload import CategoryPrediction, InferenceResultPayload
@@ -95,7 +95,9 @@ def preprocess_data(
         [model_config.category_column, model_config.date_column]
     )
     if daily_sales.empty:
-        raise ValueError("No sales history available after filtering to known categories.")
+        raise ValueError(
+            "No sales history available after filtering to known categories."
+        )
     latest_date = cast("pd.Timestamp", daily_sales[model_config.date_column].max())
     first_required_date = latest_date - pd.Timedelta(days=27)
     if daily_sales[model_config.date_column].min() > first_required_date:
@@ -125,35 +127,9 @@ log.info(
 )
 
 
-# ## 5. Reconstruct features and run inference
-# Append the incoming day and calculate calendar, lag, and rolling features exactly as in training. Align the encoded columns to the stored model contract before predicting.
-def reconsturct_features() -> tuple[pd.Timestamp, pd.DataFrame, pd.DataFrame]:
-    forecast_date = cast("pd.Timestamp", latest_date + pd.Timedelta(days=1))
-    future_rows = pd.DataFrame(
-        {
-            c.date_column: forecast_date,
-            c.category_column: a.categories,
-            c.target_column: 0.0,
-        }
-    )
-    history_and_future = pd.concat([daily_sales, future_rows], ignore_index=True)
-    future_features = create_time_features(history_and_future)
-    future_features = future_features.loc[
-        future_features[c.date_column] == forecast_date
-    ].copy()
-
-    X_future = pd.get_dummies(
-        future_features[a.raw_feature_columns], columns=[c.category_column], dtype=int
-    )
-    X_future = X_future.reindex(columns=a.model_feature_columns, fill_value=0)
-    if X_future.isna().any().any():
-        raise ValueError(
-            "Recent sales did not provide enough history to calculate every model feature."
-        )
-    return forecast_date, future_features, X_future
-
-
-forecast_date, future_features, X_future = reconsturct_features()
+forecast_date, future_features, X_future = reconsturct_features(
+    latest_date, a, daily_sales
+)
 
 
 def make_forecast(c: ModelConfiguration) -> pd.DataFrame:
