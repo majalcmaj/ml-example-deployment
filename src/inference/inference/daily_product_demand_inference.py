@@ -7,6 +7,7 @@
 # ## 1. Configure runtime and API parameters
 # Databricks job parameters are exposed as widgets. Credentials are read from Databricks Secrets only when real API mode is enabled.
 
+
 import numpy as np
 import pandas as pd
 from common.context import init_context
@@ -27,7 +28,7 @@ from inference.result_payload import CategoryPrediction, InferenceResultPayload
 
 init_context()
 log = logger.get_logger(__name__)
-from inference.gateway import make_gateway
+from inference.gateway import SalesGateway, make_gateway
 
 log.info("Simulation mode: %s", CONFIG.simulation_mode)
 log.info("Requested history days: %s", CONFIG.history_days)
@@ -52,14 +53,20 @@ log.info(
     len(a.categories),
 )
 
-# Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features.
 sales_gateway = make_gateway(CONFIG)
-source_payload = sales_gateway.fetch_source_payload()
-recent_sales = payload_to_dataframe(source_payload)
+
+
+def load_data(sales_gateway: SalesGateway) -> pd.DataFrame:
+    source_payload = sales_gateway.fetch_source_payload()
+    return payload_to_dataframe(source_payload)
+
+
+recent_sales = load_data(sales_gateway)
 validate_required_columns_present(recent_sales)
 
 
 def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataFrame:
+    """Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features."""
     model_config = metadata.configuration
     sales = columns_to_expected_types(sales)
 
@@ -109,31 +116,36 @@ log.info(
     len(a.categories),
 )
 
+
 # ## 5. Reconstruct features and run inference
 # Append the incoming day and calculate calendar, lag, and rolling features exactly as in training. Align the encoded columns to the stored model contract before predicting.
-
-forecast_date = latest_date + pd.Timedelta(days=1)
-future_rows = pd.DataFrame(
-    {
-        c.date_column: forecast_date,
-        c.category_column: a.categories,
-        c.target_column: 0.0,
-    }
-)
-history_and_future = pd.concat([daily_sales, future_rows], ignore_index=True)
-future_features = create_time_features(history_and_future)
-future_features = future_features.loc[
-    future_features[c.date_column] == forecast_date
-].copy()
-
-X_future = pd.get_dummies(
-    future_features[a.raw_feature_columns], columns=[c.category_column], dtype=int
-)
-X_future = X_future.reindex(columns=a.model_feature_columns, fill_value=0)
-if X_future.isna().any().any():
-    raise ValueError(
-        "Recent sales did not provide enough history to calculate every model feature."
+def reconsturct_features() -> tuple[future_features, X_future]:
+    forecast_date = latest_date + pd.Timedelta(days=1)
+    future_rows = pd.DataFrame(
+        {
+            c.date_column: forecast_date,
+            c.category_column: a.categories,
+            c.target_column: 0.0,
+        }
     )
+    history_and_future = pd.concat([daily_sales, future_rows], ignore_index=True)
+    future_features = create_time_features(history_and_future)
+    future_features = future_features.loc[
+        future_features[c.date_column] == forecast_date
+    ].copy()
+
+    X_future = pd.get_dummies(
+        future_features[a.raw_feature_columns], columns=[c.category_column], dtype=int
+    )
+    X_future = X_future.reindex(columns=a.model_feature_columns, fill_value=0)
+    if X_future.isna().any().any():
+        raise ValueError(
+            "Recent sales did not provide enough history to calculate every model feature."
+        )
+    return forecast_date, future_features, X_future
+
+
+forecast_date, future_features, X_future = reconsturct_features()
 
 
 def make_forecast(c: ModelConfiguration) -> pd.DataFrame:

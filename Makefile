@@ -32,9 +32,14 @@ test-training:  ## Training package tests
 test-mutation:  ## Prove e2e suites catch regressions (scripts/mutation_check.sh)
 	./scripts/mutation_check.sh
 
+.PHONY: type-check
+type-check:  ## pyright over src (catches return-type mismatches ruff misses)
+	uv run pyright
+
 .PHONY: check
-check:  ## ruff check + full test suite
+check:  ## ruff check + pyright + full test suite
 	uv run ruff check
+	$(MAKE) type-check
 	$(MAKE) test
 
 .PHONY: sync-inference
