@@ -10,10 +10,9 @@
 
 from typing import cast
 
-import numpy as np
 import pandas as pd
 from common.context import init_context
-from common.forecast_metadata import ForecastMetadata, ModelConfiguration
+from common.forecast_metadata import ForecastMetadata
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -24,7 +23,7 @@ from common.preprocessing import (
 from common import logger
 from inference.config import CONFIG
 from inference.features import reconsturct_features
-from inference.model_loader import load_model
+from inference.forecaster import make_forecast
 from inference.preprocess import payload_to_dataframe
 from inference.result_payload import CategoryPrediction, InferenceResultPayload
 
@@ -132,19 +131,7 @@ forecast_date, future_features, X_future = reconsturct_features(
 )
 
 
-def make_forecast(c: ModelConfiguration) -> pd.DataFrame:
-    model = load_model(ARTIFACT_DIR)
-    predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(
-        int
-    )
-    forecast = cast(
-        "pd.DataFrame", future_features[[c.date_column, c.category_column]].copy()
-    )
-    forecast["Predicted_Qty"] = predicted_quantities
-    return forecast.sort_values(c.category_column).reset_index(drop=True)
-
-
-forecast = make_forecast(c)
+forecast = make_forecast(ARTIFACT_DIR, future_features, X_future, c)
 
 log.info(forecast)
 log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
