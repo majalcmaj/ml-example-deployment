@@ -40,10 +40,19 @@ def history_feature_columns(featured: pd.DataFrame) -> list[str]:
     ]
 
 
+def latest_sale_date(
+    daily_sales: pd.DataFrame, metadata: ForecastMetadata
+) -> pd.Timestamp:
+    return cast(
+        "pd.Timestamp", daily_sales[metadata.configuration.date_column].max()
+    )
+
+
 def build_future_features(
-    latest_date: pd.Timestamp, metadata: ForecastMetadata, daily_sales: pd.DataFrame
+    metadata: ForecastMetadata, daily_sales: pd.DataFrame
 ) -> pd.DataFrame:
     """Append the incoming day and calculate calendar, lag, and rolling features exactly as in training."""
+    latest_date = latest_sale_date(daily_sales, metadata)
     model_config = metadata.configuration
     forecast_date = cast("pd.Timestamp", latest_date + pd.Timedelta(days=1))
     future_rows = pd.DataFrame(

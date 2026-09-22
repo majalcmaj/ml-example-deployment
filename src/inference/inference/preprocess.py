@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
+from forecasting.features import latest_sale_date
 from forecasting.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
@@ -65,7 +66,7 @@ def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataF
         raise ValueError(
             "No sales history available after filtering to known categories."
         )
-    latest_date = cast("pd.Timestamp", daily_sales[model_config.date_column].max())
+    latest_date = latest_sale_date(daily_sales, metadata)
     first_required_date = latest_date - pd.Timedelta(days=27)
     # TODO: this only bounds the pooled min/max date span, not per-category contiguity —
     # a category closed for several days mid-window still passes here and gets zero-filled

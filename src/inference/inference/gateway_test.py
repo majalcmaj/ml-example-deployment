@@ -61,7 +61,6 @@ def test_rest_gateway_injects_config_and_secrets_provider() -> None:
     config = make_config()
     secrets_provider = FakeSecretsProvider()
     result = gateway.RestGateway(config, secrets_provider=secrets_provider)
-    assert isinstance(result, gateway.RestGateway)
     assert result.config is config
     assert result.secrets_provider is secrets_provider
 

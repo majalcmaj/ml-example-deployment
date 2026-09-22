@@ -31,11 +31,8 @@ def main(
 ) -> None:
     recent_sales = _obtain_recent_sales(sales_gateway)
     daily_sales = preprocess_data(metadata, recent_sales)
-    latest_date = cast(
-        "pd.Timestamp", daily_sales[metadata.configuration.date_column].max()
-    )
 
-    future_features = build_future_features(latest_date, metadata, daily_sales)
+    future_features = build_future_features(metadata, daily_sales)
     X_future = encode_for_model(future_features, metadata)
     forecast_date = cast(
         "pd.Timestamp", future_features[metadata.configuration.date_column].max()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from forecasting.consts import (
     CATEGORY_COLUMN,
@@ -66,7 +66,9 @@ class TrainedModel:
 def _prepare_data(config: Config) -> PreparedData:
     raw_sales = load_training_data(config.data_dir)
     sales = clean_sales(raw_sales)
-    log.info(f"Removed {len(raw_sales) - len(sales):,} exact duplicate or invalid rows.")
+    log.info(
+        f"Removed {len(raw_sales) - len(sales):,} exact duplicate or invalid rows."
+    )
     log.info(
         f"Clean date range: {sales[DATE_COLUMN].min().date()} to {sales[DATE_COLUMN].max().date()}"
     )
@@ -182,8 +184,7 @@ def _persist_outputs(
     )
     metadata.save(output_dir / METADATA_FILENAME)
 
-    latest_date = cast("pd.Timestamp", prepared.daily_sales[DATE_COLUMN].max())
-    future_features = build_future_features(latest_date, metadata, prepared.daily_sales)
+    future_features = build_future_features(metadata, prepared.daily_sales)
     X_future = encode_for_model(future_features, metadata)
     forecast = make_forecast(
         output_dir, future_features, X_future, metadata.configuration
