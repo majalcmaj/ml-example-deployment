@@ -14,6 +14,13 @@ def find_project_root(start: Path | None = None) -> Path:
 
 
 def load_config[T: BaseModel](model: type[T], path: Path, *, env_prefix: str) -> T:
+    override_var = f"{env_prefix}_CONFIG_FILE"
+    override = os.environ.get(override_var)
+    if override is not None:
+        path = Path(override)
+        if not path.exists():
+            raise FileNotFoundError(f"{override_var} points at a missing file: {path}")
+
     with path.open("rb") as f:
         raw = tomllib.load(f)
 

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+import pytest
 from pydantic import BaseModel
 
 from infra.config import find_project_root, load_config
-
-if TYPE_CHECKING:
-    import pytest
 
 
 class _Model(BaseModel):
@@ -59,3 +56,34 @@ def test_find_project_root_falls_back_to_start(tmp_path: Path) -> None:
     isolated = tmp_path / "no-lock-anywhere-above"
     isolated.mkdir()
     assert find_project_root(isolated) == isolated
+
+
+def test_load_config_file_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    packaged = tmp_path / "packaged.toml"
+    _write_toml(packaged)
+    override = tmp_path / "override.toml"
+    override.write_text('data_dir = "elsewhere"\nsimulation_mode = false\n')
+    monkeypatch.setenv("X_CONFIG_FILE", str(override))
+    model = load_config(_Model, packaged, env_prefix="X")
+    assert model.simulation_mode is False
+
+
+def test_load_config_file_override_unset_uses_packaged_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("X_CONFIG_FILE", raising=False)
+    packaged = tmp_path / "packaged.toml"
+    _write_toml(packaged)
+    model = load_config(_Model, packaged, env_prefix="X")
+    assert model.simulation_mode is True
+
+
+def test_load_config_file_override_missing_raises_with_path_and_var(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    packaged = tmp_path / "packaged.toml"
+    _write_toml(packaged)
+    missing = tmp_path / "does-not-exist.toml"
+    monkeypatch.setenv("X_CONFIG_FILE", str(missing))
+    with pytest.raises(FileNotFoundError, match=r"X_CONFIG_FILE.*does-not-exist\.toml"):
+        load_config(_Model, packaged, env_prefix="X")
