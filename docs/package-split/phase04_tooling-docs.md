@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=efbee7b; date=2026-09-22 -->
 # Phase 04 — tooling-docs
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — efbee7b (2026-09-22)
 
 Read `docs/package-split/prompt.md` first.
 
