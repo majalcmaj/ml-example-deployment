@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=c0e22b801a35dd7a98be157d2c66801013137eeb; date=2026-09-22 -->
 # Phase 03 — env-secrets-provider
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — c0e22b801a35dd7a98be157d2c66801013137eeb (2026-09-22)
 
 Read `docs/docker-deploy/prompt.md` first.
 
