@@ -1,10 +1,17 @@
 # testkit
 
 Shared e2e test helpers for the workspace members. Each member (`inference`, `training`) has its
-own `src/<member>/tests/` suite: every test runs its script end-to-end via
-`testkit.runner.run_script` (cwd = a tmp dir seeded with `data/` and, for `inference`, a
-seeded `outputs/`) and diffs the artifacts it writes against a frozen copy in
-`src/<member>/tests/baseline/`.
+own `src/<member>/tests/` suite, but they run the script under test differently:
+
+- `training`'s e2e runs the real script as a subprocess via `testkit.runner.run_script`, in a
+  tmp cwd seeded with a copy of `data/` (`TRAINING_DATA_DIR`/`TRAINING_OUTPUT_DIR` env overrides
+  redirect it into that tmp dir).
+- `inference`'s e2e runs in-process: it imports `run()` from `inference.main` and calls it
+  directly with a `Config` built in the fixture, a seeded tmp `outputs/`, and injected fakes —
+  `StubSalesGateway` (`src/inference/tests/stub_gateway.py`, reads `data/` off disk instead of
+  hitting HTTP) and `testkit.metrics.StubMetricsSink` (collects metrics batches in memory).
+
+Both suites diff the artifacts they write against a frozen copy in `src/<member>/tests/baseline/`.
 
 Run with:
 

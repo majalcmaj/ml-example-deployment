@@ -8,7 +8,7 @@ from infra.context import CORRELATION_ID
 from infra.logger import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Generator, Mapping
     from logging import Logger, LoggerAdapter
     from types import TracebackType
     from typing import Self
@@ -38,7 +38,7 @@ class MetricsCollector:
         self._metrics[name] = value
 
     @contextmanager
-    def timer(self, name: str) -> Iterator[None]:
+    def timer(self, name: str) -> Generator[None]:
         start = time.perf_counter()
         try:
             yield
