@@ -52,7 +52,7 @@ def main(
     config: Config, sales_gateway: SalesGateway, metadata: ForecastMetadata
 ) -> None:
     recent_sales = _obtain_recent_sales(sales_gateway)
-    _all_dates, latest_date, daily_sales = preprocess_data(metadata, recent_sales)
+    latest_date, daily_sales = preprocess_data(metadata, recent_sales)
 
     forecast_date, future_features, X_future = reconstruct_training_features(
         latest_date, metadata, daily_sales

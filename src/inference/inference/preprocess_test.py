@@ -42,7 +42,7 @@ def test_preprocess_data_succeeds_when_called_directly_with_valid_sales() -> Non
         }
     )
 
-    _all_dates, latest_date, daily_sales = preprocess_data(metadata, sales)
+    latest_date, daily_sales = preprocess_data(metadata, sales)
 
     assert latest_date == dates.max()
     assert len(daily_sales) == 28
