@@ -28,7 +28,7 @@ def _get_api_token() -> str:
         # This will fail when not on Databricks - abstract away
         return dbutils.secrets.get(  # pyright: ignore[reportUndefinedVariable]
             scope=CONFIG.secret_scope,
-            key=CONFIG.secret_key,
+            key=CONFIG.secret_key.get_secret_value(),
         )
     except NameError as error:
         raise RuntimeError("Real API mode requires Databricks Secrets.") from error
