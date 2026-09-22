@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
     "common",
+    "infra",
     "pandas>=3.0.5",
     "pydantic>=2.13.5",
     "scikit-learn>=1.9.0",
@@ -16,6 +17,7 @@ dev = ["testkit"]
 
 [tool.uv.sources]
 common = { workspace = true }
+infra = { workspace = true }
 testkit = { workspace = true }
 
 [build-system]

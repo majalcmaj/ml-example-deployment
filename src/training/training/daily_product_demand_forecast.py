@@ -20,13 +20,13 @@ from common.consts import (
     TARGET_COLUMN,
 )
 from common.forecast_metadata import ForecastMetadata, ModelConfiguration
-from common.logger import get_logger
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
     validate_required_columns_present,
 )
+from infra.logger import get_logger
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from xgboost import XGBRegressor
 

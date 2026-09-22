@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-from common.logger import get_logger
+from infra.logger import get_logger
 
 from inference.model_loader import load_model
 

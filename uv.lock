@@ -11,6 +11,7 @@ resolution-markers = [
 members = [
     "common",
     "inference",
+    "infra",
     "ml-deployment",
     "testkit",
     "training",
@@ -598,6 +599,7 @@ version = "0.1.0"
 source = { editable = "src/inference" }
 dependencies = [
     { name = "common" },
+    { name = "infra" },
     { name = "pandas" },
     { name = "pydantic" },
     { name = "requests" },
@@ -613,6 +615,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "common", editable = "src/common" },
+    { name = "infra", editable = "src/infra" },
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "requests", specifier = ">=2.32" },
@@ -622,6 +625,17 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "testkit", editable = "src/testkit" }]
+
+[[package]]
+name = "infra"
+version = "0.1.0"
+source = { editable = "src/infra" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.13.5" }]
 
 [[package]]
 name = "iniconfig"
@@ -1214,6 +1228,7 @@ dev = [
     { name = "common" },
     { name = "debugpy" },
     { name = "inference" },
+    { name = "infra" },
     { name = "jupyter" },
     { name = "pyright" },
     { name = "ruff" },
@@ -1228,6 +1243,7 @@ dev = [
     { name = "common", editable = "src/common" },
     { name = "debugpy", specifier = ">=1.8.21" },
     { name = "inference", editable = "src/inference" },
+    { name = "infra", editable = "src/infra" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "pyright", specifier = ">=1.1.414" },
     { name = "ruff", specifier = ">=0.15.17" },
@@ -2200,6 +2216,7 @@ version = "0.1.0"
 source = { editable = "src/training" }
 dependencies = [
     { name = "common" },
+    { name = "infra" },
     { name = "joblib" },
     { name = "matplotlib" },
     { name = "pandas" },
@@ -2215,6 +2232,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "common", editable = "src/common" },
+    { name = "infra", editable = "src/infra" },
     { name = "joblib", specifier = ">=1.6.0" },
     { name = "matplotlib", specifier = ">=3.11.1" },
     { name = "pandas", specifier = ">=3.0.5" },

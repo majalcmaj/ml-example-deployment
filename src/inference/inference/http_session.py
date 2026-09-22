@@ -1,4 +1,4 @@
-from common.context import CORRELATION_ID
+from infra.context import CORRELATION_ID
 from requests import Response, Session
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry

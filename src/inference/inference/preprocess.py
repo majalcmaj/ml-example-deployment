@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
-from common.logger import get_logger
 from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
     validate_required_columns_present,
 )
+from infra.logger import get_logger
 
 if TYPE_CHECKING:
     from common.forecast_metadata import ForecastMetadata
