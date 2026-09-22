@@ -1,7 +1,7 @@
 """Statement-level AST similarity between two Python files.
 
 Rough-and-ready clone finder used to locate training/inference duplication worth pulling
-into `common`. Not wired into CI; see docs/TODO.md for the cleanup note.
+into `forecasting`. Not wired into CI; see docs/TODO.md for the cleanup note.
 
 Normalises user identifiers, argument names and constants (so renamed-but-same-shape
 code matches), keeps imported module names and attribute names (they carry the API

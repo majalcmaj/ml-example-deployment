@@ -5,16 +5,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Daily product-demand forecasting (one global XGBoost model over coffee-shop sales), organised as a
-**uv workspace** (Python 3.14) so `inference` can be deployed without `training`'s dependencies.
-Workspace members live under `src/*`, each with its own `pyproject.toml`:
+**uv workspace** (Python 3.14) in a **libs/apps** shape so `inference` can be deployed without
+`training`'s dependencies. Workspace members live under `src/*`, each with its own `pyproject.toml`:
 
-- `common` — config loader (`load_config`), correlation-id context, logger, column consts, `create_time_features`
-- `training` — `training/daily_product_demand_forecast.py`: cleans CSVs, trains, writes `outputs/{next_day_product_forecast.csv, xgb_daily_product_demand.json, forecast_metadata.joblib}`
-- `inference` — `inference/daily_product_demand_inference.py`: loads those artifacts, rebuilds features from recent sales, writes `outputs/inference_next_day_forecast.csv` (simulation mode by default; real mode hits HTTP endpoints via `http_session.py`)
+- `infra` (library) — config loader (`load_config`), correlation-id context, logger. Depends on
+  nothing but pydantic.
+- `forecasting` (library) — the domain kernel: column/artifact consts, the train↔infer metadata
+  contract (`ForecastMetadata`), preprocessing helpers, feature engineering (`create_time_features`,
+  `build_future_features`, `encode_for_model`), model load + predict (`load_model`,
+  `make_forecast`), and artifact-presence checks (`verify_artifacts_present`). Depends on `infra`.
+- `training` (app) — `training/daily_product_demand_forecast.py`: cleans CSVs, trains, writes `outputs/{next_day_product_forecast.csv, xgb_daily_product_demand.json, forecast_metadata.joblib}`
+- `inference` (app) — `inference/daily_product_demand_inference.py`: loads those artifacts, rebuilds features from recent sales, writes `outputs/inference_next_day_forecast.csv` (simulation mode by default; real mode hits HTTP endpoints via `http_session.py`)
 - `testkit` — dev-only: `runner.run_script` (runs a member script in a tmp cwd via `uv run python3`) and `asserts` (tolerance constants + frame comparators)
 
-Dependency direction: `training` and `inference` → `common`; `testkit` is a dev dep of both.
-`training` and `inference` never import each other — the only link is the artifact files.
+Dependency direction: `training` and `inference` → `forecasting` → `infra`; `testkit` is a dev dep
+of both apps. `training` and `inference` never import each other — the only link is the artifact
+files, and this is now enforced by the library boundary rather than convention.
 
 ## Commands
 
@@ -23,7 +29,7 @@ target lines in `Makefile` as `## ...` comments — keep them updated when addin
 
 ```
 uv run ruff check      # lint (ruff config in root pyproject; *.ipynb excluded)
-uv run pytest src/common/common/features_test.py::test_is_weekend_flags_saturday_and_sunday   # single test
+uv run pytest src/forecasting/forecasting/features_test.py::test_is_weekend_flags_saturday_and_sunday   # single test
 ```
 
 Run scripts directly from repo root: `uv run python3 src/training/training/daily_product_demand_forecast.py`
@@ -32,7 +38,7 @@ Run scripts directly from repo root: `uv run python3 src/training/training/daily
 ## Config and paths
 
 Each member has `config.py` (pydantic `Config`, frozen) + `config.toml` next to it, loaded once at
-import time into a module-level `CONFIG`. `common.config.load_config`:
+import time into a module-level `CONFIG`. `infra.config.load_config`:
 - overrides any field from env var `<PREFIX>_<FIELD_UPPER>` (`TRAINING_DATA_DIR`, `INFERENCE_ARTIFACT_DIR`, …)
 - resolves relative `Path` fields against the project root, found by walking up to `uv.lock`
 
@@ -59,13 +65,14 @@ that mechanism intact when touching config.
 ## Known drift / gotchas
 
 - The `.py` scripts started as `nbconvert` exports of the `.ipynb` next to them, but have since
-  diverged: `daily_product_demand_inference.py` was split into six modules (`gateway.py`,
-  `features.py`, `forecaster.py`, `preprocess.py`, `result_upload.py`, `model_loader.py`) and no
-  longer carries `# In[n]:` cell markers, and the training script has drifted the same way. Tests
-  run the **scripts**; the notebooks still exist but show stale logic (e.g. inline secret lookup,
-  dict-style artifact access) — treat them as historical reference only, not current design. Do
-  not edit the notebooks. They're slated for eventual removal from the repo (tracked in
-  `docs/TODO.md`); once gone, this note goes with them.
+  diverged: `daily_product_demand_inference.py` was split into `gateway.py`, `preprocess.py`,
+  `result_upload.py`, `config.py`, and `http_session.py` (its pure-compute modules — `features.py`,
+  `forecaster.py`/`model_loader.py`, `artifacts.py` — have since moved into `forecasting` as
+  `features.py`, `model.py`, and `artifacts.py`) and no longer carries `# In[n]:` cell markers, and
+  the training script has drifted the same way. Tests run the **scripts**; the notebooks still
+  exist but show stale logic (e.g. inline secret lookup, dict-style artifact access) — treat them
+  as historical reference only, not current design. Do not edit the notebooks. They're slated for
+  eventual removal from the repo (tracked in `docs/TODO.md`); once gone, this note goes with them.
 - `make baseline-inference` runs the training script at repo root, copies model + metadata into
   inference's baseline dir, then runs `make test-inference`.
 - `outputs/` is gitignored; `data/coffeeshop_daily_sales_report.csv` is the only input and is committed.

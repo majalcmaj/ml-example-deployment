@@ -25,9 +25,9 @@ severe first.
   (`min` vs `latest - 27d`), not per-category contiguity. A category closed for several days
   mid-window, or one filtered out partway by the `isin(metadata.categories)` check, still passes
   because other categories have full history; the gaps are then silently zero-filled by
-  `aggregate_per_category` (`common/preprocessing.py:35`) instead of raised — model forecasts off
+  `aggregate_per_category` (`forecasting/preprocessing.py:35`) instead of raised — model forecasts off
   fabricated zero-history rather than failing fast as the docstring promises. TODO: Write this as a "todo" comment + add a point in todo.md. I believe this should be a part of data drift detection - some guardrails for the data distribution.
-- [ ] **`common/preprocessing.py:16`** — `columns_to_expected_types` mutates the `sales` argument
+- [ ] **`forecasting/preprocessing.py:16`** — `columns_to_expected_types` mutates the `sales` argument
   in place while also returning a value, implying a pure transform. A future unit-test suite
   reusing one fixture DataFrame across cases will see it silently altered after the first call,
   producing order-dependent failures. TODO: make it a pure transform -> copy the dataframe, never mutate.

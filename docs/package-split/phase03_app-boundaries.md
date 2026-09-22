@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=45b0713; date=2026-09-22 -->
 # Phase 03 — app-boundaries
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 45b0713 (2026-09-22)
 
 Read `docs/package-split/prompt.md` first.
 

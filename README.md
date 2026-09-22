@@ -7,14 +7,16 @@ workspace so `inference` can be deployed without pulling in `training`.
 
 ```
 src/
-  common/     shared config loader, logger, correlation-id context, feature engineering
-  training/   trains the model, writes outputs/{model,metadata,predictions}
-  inference/  loads the model, serves next-day forecasts
-  testkit/    e2e test helpers (script runner, tolerance asserts) — dev-only
+  infra/        config loader, logger, correlation-id context
+  forecasting/  domain kernel: consts, metadata contract, preprocessing, feature engineering, model load+predict
+  training/     trains the model, writes outputs/{model,metadata,predictions}
+  inference/    loads the model, serves next-day forecasts
+  testkit/      e2e test helpers (script runner, tolerance asserts) — dev-only
 ```
 
-Dependency direction: `training` and `inference` both depend on `common`; `testkit` is a dev
-dependency of both. Neither `training` nor `inference` depends on the other.
+Dependency direction: `training` and `inference` (deployable apps) both depend on `forecasting`,
+which depends on `infra`; `testkit` is a dev dependency of both apps. Neither `training` nor
+`inference` depends on the other.
 
 ## Make targets
 
