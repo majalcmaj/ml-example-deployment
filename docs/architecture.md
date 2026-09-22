@@ -298,3 +298,54 @@ Compose exercises the same mechanism with a literal `local-dev-token` in `docker
 In AWS the only change is where that env var's value comes from — Secrets Manager injected into
 the Lambda's environment at invoke time rather than a Compose-level literal — not the code that
 reads it.
+
+## Infrastructure as code
+
+Terraform, one parameterized root module (an `environment` variable) rather than three separate
+configs — dev/staging/prod are the same resource shape, differing only in IAM/GH-Environment
+scoping. State backend: S3 with native locking (`use_lockfile`, Terraform ~>1.10), no DynamoDB
+table needed. GitHub's side (the `dev`/`staging`/`prod` Environments and their branch/reviewer
+restrictions, already assumed by `test.yml`/`deploy-main.yml`) stays a manual prerequisite, not
+Terraform-managed — this module is AWS-only.
+
+**The one manual exception:** a tiny `bootstrap` config (the state bucket, and the GitHub OIDC
+provider — an account-wide singleton) is applied once by hand, before any pipeline exists to apply
+anything else. Everything downstream of it goes through CI.
+
+**Enforcing pipeline-only writes:** three deploy roles (dev/staging/prod), each trusted only via
+GitHub's OIDC provider with a `sub` condition scoped to that GH Environment —
+
+```
+"Condition": {"StringEquals": {
+  "token.actions.githubusercontent.com:sub":
+    "repo:majalcmaj/ml-example-deployment:environment:prod"
+}}
+```
+
+— so only a workflow run through that specific environment (already gated on branch/reviewers in
+GH Settings) can assume it. No IAM users, no long-lived AWS keys, ever created for a human. The two
+ECR repositories (training, inference) and the model-artifacts/predictions S3 buckets each carry a
+resource policy denying write actions to everything except that environment's deploy-role ARN —
+enforcement lives on the resource, not just on who happens to have console access.
+
+**Runtime execution roles** are separate from the deploy roles and scoped tighter still: a Fargate
+task role for training (read raw-sales S3, write model-artifacts S3, `cloudwatch:PutMetricData`,
+its own log group) and a Lambda execution role for inference (write the predictions S3 bucket,
+`secretsmanager:GetSecretValue` for `INFERENCE_API_TOKEN`, `cloudwatch:PutMetricData`, its own log
+group). Neither can touch ECR, the other's bucket, or IAM itself.
+
+**Pipeline wiring:** Terraform creates the EventBridge daily-schedule rules and targets (Fargate
+task for training, Lambda for inference — the same two triggers in the diagram above), the ECS
+task definition, and the Lambda function (`package_type = "Image"`, `image_uri` from the ECR
+repo). Model promotion is deliberately *not* fully automated end to end: training producing a new
+model artifact doesn't by itself put it in front of clients. Building the new artifact into an
+inference image and pushing it to prod rides the same human-gated path code deploys already use —
+the `prod` GH Environment's manual `workflow_dispatch` + required reviewer, per
+`deploy-main.yml`'s existing comment. A person looks at the training run's validation metrics
+(`validation_mae`/`validation_rmse`/`validation_wmape_percent`, already recorded — see Alerting,
+above) and decides to trigger that promotion; there's no separate approval system to build, and no
+path for a model to reach production without going through it.
+
+**Read-only human role:** a separate IAM role for people — `ecr:Describe*`/`BatchGetImage`,
+`logs:Get*`, `cloudwatch:Describe*` — for viewing and debugging only. It cannot push an image,
+update the Lambda, or touch the ECS task definition; there is no role a human can assume that can.

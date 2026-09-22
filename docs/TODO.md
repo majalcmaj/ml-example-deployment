@@ -90,6 +90,10 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 ## Deliverable 2: Solution design doc
 
 **P0**
+- [x] Infrastructure as code approach write-up — `docs/architecture.md`'s "Infrastructure as code"
+  section: Terraform, OIDC-only deploy roles per GH Environment, resource policies denying writes
+  except from those roles, and model promotion riding the same human-gated `prod` dispatch code
+  deploys already use
 - [x] Architecture diagram (Mermaid/draw.io/PNG) — `docs/architecture.md`
 - [x] Databricks vs Lambda tradeoff write-up — `docs/architecture.md`'s "Why Fargate/SageMaker +
   Lambda, not Databricks" section
