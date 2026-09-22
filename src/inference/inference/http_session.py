@@ -19,6 +19,7 @@ def create_http_session() -> Session:
         backoff_factor=1,
         backoff_jitter=1,
         status_forcelist=[408, 429, 500, 502, 503, 504],
+        allowed_methods=None,  # retry on POST too, not just urllib3's idempotent-only default
     )
     http.headers.update({"X-Correlation-ID": CORRELATION_ID.get()})
     http.mount("https://", HTTPAdapter(max_retries=_retries))

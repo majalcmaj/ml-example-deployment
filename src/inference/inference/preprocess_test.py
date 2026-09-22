@@ -48,6 +48,22 @@ def test_preprocess_data_succeeds_when_called_directly_with_valid_sales() -> Non
     assert len(daily_sales) == 28
 
 
+def test_preprocess_data_logs_dropped_unknown_category_rows(caplog: pytest.LogCaptureFixture) -> None:
+    metadata = make_metadata(categories=["Coffee"])
+    dates = pd.date_range("2026-01-01", periods=28, freq="D")
+    coffee = pd.DataFrame({"Date": dates.strftime("%Y-%m-%d"), "Menu": "Coffee", "Total_Qty": 5})
+    unknown = pd.DataFrame(
+        {"Date": ["2026-01-15", "2026-01-16"], "Menu": "Smoothie", "Total_Qty": 3}
+    )
+    sales = pd.concat([coffee, unknown], ignore_index=True)
+
+    with caplog.at_level("WARNING"):
+        daily_sales = preprocess_data(metadata, sales)
+
+    assert daily_sales["Menu"].unique().tolist() == ["Coffee"]
+    assert any("Dropped 2 row(s)" in message for message in caplog.messages)
+
+
 def test_payload_to_dataframe_falls_back_to_data_when_records_is_null() -> None:
     records = [{"Date": "2026-01-01", "Menu": "Coffee", "Total_Qty": 3}]
     payload = {"records": None, "data": records}

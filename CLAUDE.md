@@ -113,5 +113,8 @@ that mechanism intact when touching config.
 - `docker/` holds the three Dockerfiles + `docker/mock-api/server.py` (a stand-in sales API);
   `deploy/config/*.toml` holds the config files baked into the images via `<PREFIX>_CONFIG_FILE`
   — see "Config and paths" above.
-- `docs/TODO.md` and `docs/planning.md` hold the prioritized backlog and design rationale; check
+- `docs/TODO.md` and `docs/architecture.md` hold the prioritized backlog and design rationale; check
   them before proposing structural changes (several options are already ruled out there).
+  `docs/planning.md` was the original source for this rationale but has since been deleted from
+  the working tree — don't cite it, its content has been folded into `docs/architecture.md` and
+  `docs/what_if.md`.

@@ -111,6 +111,15 @@ Two clusters: live correctness/reliability bugs in shipped code, and documentati
     arbitrary deserialization on load, not just a bad prediction, and neither doc calls out or
     mitigates that cost.
 
+## Status (2026-09-22)
+
+Implemented: #2, #1, #5, #3 (drop-count now logged), #6, #7, #8. **#4 was attempted and reverted**:
+the naive per-category row-count-vs-window-span heuristic flags nearly every category in the real
+dataset as "gapped," because categories legitimately sell zero units on many days and the raw
+sales-event feed has no row for a zero-sale day — indistinguishable from an actual reporting outage
+without a signal this feed doesn't carry. Left open in `docs/TODO.md` with that finding recorded so
+it isn't re-attempted the same way.
+
 ## Suggested fix order
 
 1. #2 — dead mutation-7 sed pattern defeats the project's own safety net; fix first.

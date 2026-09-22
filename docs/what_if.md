@@ -70,11 +70,11 @@ was specifically chosen to avoid.
 promote-to-production gate that isn't "someone manually copies files into S3."
 
 **Move:** SageMaker Model Registry, or managed MLflow on SageMaker, replacing the S3 + manifest
-scheme this design uses today (`docs/planning.md:45`: "hash data + model, store as blobs in git
-... real system would use S3 + git as pointer/manifest only"). A lighter specialized option worth
-naming before reaching for SageMaker: [DVC](https://dvc.org) layers exactly this S3-blobs +
-git-pointer scheme on top of git as an off-the-shelf tool, instead of hand-rolling the
-hashing/manifest logic `docs/planning.md` describes. Considered and declined *for now* — not an
+scheme this design uses today ("hash data + model, store as blobs in git ... real system would use
+S3 + git as pointer/manifest only"). A lighter specialized option worth naming before reaching for
+SageMaker: [DVC](https://dvc.org) layers exactly this S3-blobs + git-pointer scheme on top of git
+as an off-the-shelf tool, instead of hand-rolling the hashing/manifest logic described above.
+Considered and declined *for now* — not an
 oversight. At this scale (one model, one owner, infrequent retraining) a managed registry, or even
 adopting DVC, is setup cost with no immediate payoff; it's the right move once more than one of
 those stops being true.

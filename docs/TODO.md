@@ -1,6 +1,6 @@
 # TODO
 
-Prioritized task list, pulled from `planning.md`. P0 = required for submission, P1 = strengthens it, P2 = open question / nice-to-have. Check off as done; keep rationale in `planning.md`.
+Prioritized task list. P0 = required for submission, P1 = strengthens it, P2 = open question / nice-to-have. Check off as done; keep rationale inline here or in `docs/architecture.md`.
 
 ## Deliverable 1: Refactored code
 
@@ -22,12 +22,22 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] End-to-end tests: full pipeline against Docker Compose mocks — `make test-compose`
   (`scripts/compose_smoke.sh`), wired into CI after `test-e2e` (phase 05)
 - [ ] Auto-generate data schema/contract at training time, version with model artifact, validate on both train + inference
-- [ ] Fail-fast model loading (no fallback, no crash-loop)
+- [x] Fail-fast model loading (no fallback, no crash-loop) — `forecasting/artifacts.py`'s
+  `verify_artifacts_present` and `forecasting/model.py`'s `load_model` both raise
+  `FileNotFoundError` with no fallback; `inference/main.py`'s `run()` calls
+  `verify_artifacts_present` before any network/feature work
 - [ ] Secret → vault abstraction — env-var backend shipped (`INFERENCE_API_TOKEN` read by
   `_EnvSecretsProvider`, `SecretsProvider` seam retained, `_DatabricksSecretsProvider` deleted); an
   AWS Secrets Manager / vault-backed implementation behind the same seam is still open
-- [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
-- [ ] 28-day history check only bounds the pooled min/max date span (`preprocess.py`), not per-category contiguity — a category closed for several days mid-window still passes and gets zero-filled by `aggregate_per_category` instead of raised. Frame this as a data-drift / distribution guardrail (detect and reject fabricated zero-history), not a quick fix to the existing check.
+- [x] 28-consecutive-calendar-day history check off-by-one — verified already correct:
+  `latest_date - pd.Timedelta(days=27)` is a 28-day-inclusive lower bound
+- [ ] 28-day history check per-category contiguity (`preprocess.py`) — a category closed for
+  several days mid-window still passes and gets zero-filled by `aggregate_per_category` instead of
+  raised. Tried and reverted the naive fix (flag a category with fewer rows than window days): real
+  sales data has categories that legitimately sell zero units on many days, and the raw sales-event
+  feed has no row at all for a zero-sale day, so that heuristic flags nearly every category as
+  "gapped" against the real dataset. Needs a signal this feed doesn't carry (assortment/availability
+  feed, or a minimum-support threshold tuned against real drop patterns) — not a quick fix.
 - [ ] Documentation: Improve readme, add runbooks (e.g. what happens when regression tests break - whether to accept change or investigate), add arch diagram
 
 **P1**
@@ -81,7 +91,11 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Separate one-off exploration from diagnostics that should run/log every training run — concretely: pull training notebook's inspect/validate EDA cell (`display(raw_sales.head())`, shape prints) out into its own scratch notebook, keep the training pipeline module free of exploration output
 - [ ] Note: metadata (`outlier_bounds`, `validation_metrics`, `model_feature_columns`, `categories`) is NOT a separable stage from training — outlier bounds are needed *before* fit (train_mask), validation metrics only exist *after* fit. Don't split it into its own workflow/notebook; it stays a byproduct of the training run. Ruled out this option when considering the training/inference notebook split.
 - [x] Does data/model need its own top-level module (vs current training/inference/common)? — Yes: the `package-split` plan extracted it as the `forecasting` library (plus `infra` for cross-cutting config/logging/context), splitting the former `common` junk drawer along a domain/infra seam.
-- [ ] Seed pinning for training reproducibility (model + train/test split)
+- [x] Seed pinning for training reproducibility (model + train/test split) — `RANDOM_SEED = 42` in
+  `src/training/training/main.py`, threaded into `XGBRegressor(random_state=random_seed, ...)`
+- [ ] Remaining training nondeterminism: `XGBRegressor(..., n_jobs=-1)` means multi-threaded
+  histogram building isn't guaranteed bit-identical across runs even with a fixed seed (thread
+  scheduling affects floating-point summation order) — the actual open lever, not the seed itself
 - [ ] Clean up `scripts/ast_similarity.py` (quick AST clone finder for training vs inference scripts): drop single-line/weight heuristics for something principled (e.g. min fingerprint length), add `argparse`, consider `--json` output; or delete it once the shared-feature-extraction P0 item lands and it has served its purpose
 - [x] Pin dependency/environment versions (dev/prod parity) — digest-pinned `uv` and `python` base
   images plus `uv sync --frozen` in both `docker/inference.Dockerfile` and
@@ -116,7 +130,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
   explicitly: CI (`ci-cd.yml`, lint/unit/e2e/compose on every push/PR) is real; CD
   (`deploy-staging`/`-prod`/`-dev`) is deliberately stubbed in `Makefile:109-119`
 - [x] Rollback mechanism if newly deployed model performs badly — the image tag is the code+model
-  identity (model is baked in, `docs/planning.md`), so rollback is redeploying the previous tag
+  identity (model is baked in), so rollback is redeploying the previous tag
 - [x] Note feature store deliberately skipped — `docs/architecture.md`'s "Feature store" section:
   named alternatives (SageMaker Feature Store, Feast), and why none of the problems they solve
   (train/serve skew, online low-latency retrieval, cross-model reuse, point-in-time correctness)

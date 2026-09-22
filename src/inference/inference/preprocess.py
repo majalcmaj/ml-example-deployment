@@ -42,8 +42,15 @@ def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataF
     model_config = metadata.configuration
     sales = columns_to_expected_types(sales)
 
-    valid_rows = get_valid_date_target_array(sales)
-    valid_rows &= sales[model_config.category_column].isin(metadata.categories)
+    date_valid = get_valid_date_target_array(sales)
+    category_valid = sales[model_config.category_column].isin(metadata.categories)
+    dropped_unknown_category = int((date_valid & ~category_valid).sum())
+    if dropped_unknown_category:
+        log.warning(
+            "Dropped %d row(s) with a category not in the model's known categories.",
+            dropped_unknown_category,
+        )
+    valid_rows = date_valid & category_valid
     sales = sales.loc[
         valid_rows,
         [
@@ -68,15 +75,18 @@ def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataF
         )
     latest_date = latest_sale_date(daily_sales, metadata)
     first_required_date = latest_date - pd.Timedelta(days=27)
-    # TODO: this only bounds the pooled min/max date span, not per-category contiguity —
-    # a category closed for several days mid-window still passes here and gets zero-filled
-    # by aggregate_per_category() below instead of raised. See docs/TODO.md (data-drift
-    # guardrails) for the tracked follow-up.
     if daily_sales[model_config.date_column].min() > first_required_date:
         raise ValueError(
             "At least 28 consecutive calendar days of history are required for inference."
         )
 
+    # NOTE: per-category contiguity (a category closed for several days mid-window still passes
+    # here and gets zero-filled by aggregate_per_category() below instead of raised) is NOT
+    # fixed by counting distinct dates per category against the window span: real sales data has
+    # categories that legitimately sell zero units on plenty of days (a raw sales-event feed has
+    # no row for a zero-sale day at all), so "fewer rows than window days" fires on almost every
+    # category in practice and can't be told apart from an actual reporting gap without a
+    # separate assortment/availability signal. See docs/TODO.md (data-drift guardrails).
     all_dates = pd.date_range(
         daily_sales[model_config.date_column].min(), latest_date, freq="D"
     )

@@ -168,8 +168,8 @@ write, not a separate mechanism.
 A direct read of a well-known/dated S3 key clears that bar at the request volume this system
 actually has (a handful of clients, one new object a day): GET latency is tens of milliseconds,
 no compute sits on the read path, and there's no service to keep warm or pay for idly. Access is a
-public-read bucket policy, justified by the data being non-PII aggregate sales figures
-(`docs/planning.md`: "no compliance/retention concern"); a presigned-URL scheme is the fallback if
+public-read bucket policy, justified by the data being non-PII aggregate sales figures with no
+compliance/retention concern; a presigned-URL scheme is the fallback if
 public-read is rejected later, without anything upstream changing.
 
 The earlier open question of a latency SLA (`docs/TODO.md:65`) splits into two separate things
@@ -198,13 +198,13 @@ Both scheduled jobs already emit this without any AWS-specific code: `infra/metr
 (same `send(metrics)` interface, no caller change), and a CloudWatch alarm fires on that
 `total_duration_seconds` metric going *missing* within the expected window — which is what catches
 a job that silently stopped firing at all. A bad prediction still emits this heartbeat and passes
-the check, but a job EventBridge never triggered, or that crashed before completion, does not
-(`docs/planning.md:91`). This is deliberately a liveness check, not a quality check — see below for
+the check, but a job EventBridge never triggered, or that crashed before completion, does not.
+This is deliberately a liveness check, not a quality check — see below for
 where drift/quality monitoring sits alongside it.
 
 ## Drift and data-quality monitoring
 
-Scope, per `docs/planning.md`: there's no ground-truth/label feedback loop in this assignment, so
+Scope: there's no ground-truth/label feedback loop in this assignment, so
 monitoring is limited to data/feature drift, not model performance metrics — that would need
 predictions joined against actuals, which persisting the recent-sales window to S3 (above) sets up
 for later but doesn't provide today.
@@ -212,24 +212,28 @@ for later but doesn't provide today.
 This reuses the same metrics seam as the heartbeat above, not a new subsystem — drift signals are
 just more values recorded on the same `MetricsCollector` and sent through the same `MetricsSink`:
 
-- **Categorical drift.** `src/inference/inference/preprocess.py:46` already filters incoming rows
-  to `metadata.categories`; a sales row for a category the model wasn't trained on is silently
-  dropped rather than counted. Recording that drop count (`metrics.record("unknown_category_rows",
-  ...)`) before the filter turns a silent data-loss path into a monitored one, alerted on via the
-  same CloudWatch-alarm mechanism as the heartbeat — not a new alerting path. (`docs/TODO.md`'s
-  "Categorical feature drift" item is still open in code; this is its design.)
+- **Categorical drift.** `src/inference/inference/preprocess.py` filters incoming rows to
+  `metadata.categories`; a sales row for a category the model wasn't trained on is dropped and
+  logged (`log.warning` with the drop count) rather than silently discarded. Wiring that count
+  into `MetricsCollector` (`metrics.record("unknown_category_rows", ...)`) instead of just logging
+  it would let it alert via the same CloudWatch-alarm mechanism as the heartbeat — not a new
+  alerting path — once the metrics seam is threaded through `preprocess_data`.
 - **Numeric/distribution drift.** Training already computes per-category outlier bounds
   (`ForecastMetadata.outlier_bounds`, IQR quartiles used to mask outliers before fit). Comparing
   each day's incoming sales against those same bounds at inference time and recording the violation
   rate reuses a number training already produces instead of inventing a second drift statistic.
-- **Missing/fabricated history.** `docs/TODO.md` already frames the 28-day contiguity gap (today's
-  check only bounds the pooled min/max date span, not per-category contiguity, so a category closed
-  for several days mid-window gets zero-filled and passes) as a data-drift guardrail in its own
-  right, not a quick off-by-one fix — same family as the two checks above: reject or flag
-  fabricated-looking input before it reaches the model, rather than waiting for a bad prediction.
+- **Missing/fabricated history.** Still open, and harder than it looks: `docs/TODO.md` frames the
+  28-day check as only bounding the pooled min/max date span, not per-category contiguity, so a
+  category closed for several days mid-window still passes and gets zero-filled by
+  `aggregate_per_category` instead of raised. The naive fix (flag a category whose row count is
+  below the window's day count) was tried and reverted — real sales data has categories that
+  legitimately sell zero units on many days, and a raw sales-event feed has no row at all for a
+  zero-sale day, so that heuristic flags almost every category as "gapped." Telling an actual
+  reporting outage apart from ordinary sparse sales needs a signal this feed doesn't carry (e.g. an
+  assortment/availability feed, or a minimum-support threshold tuned against real drop patterns).
 
-**Declined: automatic retraining on detected drift.** `docs/planning.md` already rejects this in
-favor of monitoring plus a human decision — an unattended pipeline that retrains itself off a drift
+**Declined: automatic retraining on detected drift**, in favor of monitoring plus a human decision
+— an unattended pipeline that retrains itself off a drift
 signal it can't tell apart from a genuine, permanent shift (a product line actually discontinued)
 risks quietly baking a real business change into "corrected" data, or masking an upstream sales-API
 bug as noise. These metrics feed a human here, not a retrain trigger.

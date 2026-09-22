@@ -91,7 +91,7 @@ mutate 6 "$INFERENCE_CONFIG" \
     "src/inference/inference/config_test.py"
 
 mutate 7 "$RESULT_UPLOAD" \
-    "sed -i 's/predicted_quantity=int(cast(\"int\", row\[\"Predicted_Qty\"\]))/predicted_quantity=int(cast(\"int\", row[\"Predicted_Qty\"])) + 1/' $RESULT_UPLOAD" \
+    "sed -i 's/predicted_quantity=int(cast(\"int\", row\[PREDICTED_QTY_COLUMN\]))/predicted_quantity=int(cast(\"int\", row[PREDICTED_QTY_COLUMN])) + 1/' $RESULT_UPLOAD" \
     "src/inference -m e2e"
 
 sed -i 's/history_days = int(query.get("history_days", \["28"\])\[0\])/history_days = min(10, int(query.get("history_days", ["28"])[0]))/' "$MOCK_API_SERVER"
