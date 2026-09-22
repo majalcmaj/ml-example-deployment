@@ -1,0 +1,5 @@
+source_endpoint_url = "http://mock-api:8080/api/recent-sales"
+result_endpoint_url = "http://mock-api:8080/api/demand-forecast"
+history_days = 60
+artifact_dir = "/opt/model"
+output_dir   = "/var/forecast/outputs"

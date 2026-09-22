@@ -52,18 +52,22 @@ def main(
     )
 
 
-if __name__ == "__main__":
+def run(config: Config, sales_gateway: SalesGateway) -> None:
     log = logger.get_logger(__name__)
-    log.info("Running inference with config: %s", CONFIG.model_dump_json(indent=2))
+    log.info("Running inference with config: %s", config.model_dump_json(indent=2))
 
-    verify_artifacts_present(CONFIG.artifact_dir)
+    verify_artifacts_present(config.artifact_dir)
 
-    loaded_metadata = ForecastMetadata.load(CONFIG.artifact_dir / METADATA_FILENAME)
+    metadata = ForecastMetadata.load(config.artifact_dir / METADATA_FILENAME)
 
     log.info(
         "Loaded model contract with %s features and %s categories.",
-        len(loaded_metadata.model_feature_columns),
-        len(loaded_metadata.categories),
+        len(metadata.model_feature_columns),
+        len(metadata.categories),
     )
 
-    main(CONFIG, make_gateway(CONFIG), loaded_metadata)
+    main(config, sales_gateway, metadata)
+
+
+if __name__ == "__main__":
+    run(CONFIG, make_gateway(CONFIG))

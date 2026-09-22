@@ -1,8 +1,12 @@
 import os
 import tomllib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def find_project_root(start: Path | None = None) -> Path:
@@ -13,12 +17,21 @@ def find_project_root(start: Path | None = None) -> Path:
     return current
 
 
-def load_config[T: BaseModel](model: type[T], path: Path, *, env_prefix: str) -> T:
+def load_config[T: BaseModel](
+    model: type[T], path: Path, *, env_prefix: str, env: Mapping[str, str] = os.environ
+) -> T:
+    override_var = f"{env_prefix}_CONFIG_FILE"
+    override = env.get(override_var)
+    if override is not None:
+        path = Path(override)
+        if not path.exists():
+            raise FileNotFoundError(f"{override_var} points at a missing file: {path}")
+
     with path.open("rb") as f:
         raw = tomllib.load(f)
 
     for name in model.model_fields:
-        env_value = os.environ.get(f"{env_prefix}_{name.upper()}")
+        env_value = env.get(f"{env_prefix}_{name.upper()}")
         if env_value is not None:
             raw[name] = env_value
 

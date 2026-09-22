@@ -1,0 +1,44 @@
+services:
+  mock-api:
+    build:
+      context: .
+      dockerfile: docker/mock-api.Dockerfile
+    environment:
+      MOCK_API_TOKEN: local-dev-token
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz')"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # Runs once and exits (writes the model into model-artifacts, then stops) -- there's no
+  # scheduling here, this is a local dev stack. To rerun training on its own, without rebuilding
+  # or restarting mock-api/inference, use `make compose-retrain` (docker compose run --rm training).
+  training:
+    build:
+      context: .
+      dockerfile: docker/training.Dockerfile
+    restart: "no"
+    volumes:
+      - ./data:/var/forecast/data:ro
+      - model-artifacts:/var/forecast/outputs
+
+  inference:
+    build:
+      context: .
+      dockerfile: docker/inference.Dockerfile
+    restart: "no"
+    environment:
+      INFERENCE_API_TOKEN: local-dev-token
+    depends_on:
+      mock-api:
+        condition: service_healthy
+      training:
+        condition: service_completed_successfully
+    volumes:
+      - model-artifacts:/opt/model:ro
+      - ./deploy/config/inference.toml:/etc/forecast/inference.toml:ro
+      - ./outputs:/var/forecast/outputs
+
+volumes:
+  model-artifacts:

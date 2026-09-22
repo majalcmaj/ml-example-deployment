@@ -7,13 +7,22 @@
 
 **Config & secrets**
 - Notebook/Databricks config moved into TOML (config-as-code, versioned)
-- TOML currently holds a secret field (known planted issue) — plans to move to a vault (e.g. AWS Secrets Manager) via an abstraction
+- Planted secret is gone: `inference/config.toml` no longer carries `secret_key`. The API token comes
+  from `INFERENCE_API_TOKEN` at runtime through the retained `SecretsProvider` seam
+  (`gateway.py`'s `_EnvSecretsProvider`); `_DatabricksSecretsProvider` and the `dbutils` lookup were
+  deleted with it
+- Vault-backed implementation behind that same seam (e.g. AWS Secrets Manager) is still open — the
+  env var is the ship-now backend, not the final one
 - Hardcoded constants scattered across notebooks in many places — pull into TOML config alongside everything else
 
 **Local dev / environment parity**
 - Docker Compose spins up mock/stub services so the *same* remote code path and config run everywhere — no separate bogus local-only path
+- Resolved: simulation mode is dropped. `_SimulatedGateway` and `config.simulation_mode` are gone
+  from production code; the payload fixture moved to `src/inference/tests/stub_gateway.py`
+  (`StubSalesGateway`), injected through the `SalesGateway` protocol for tests only. Locally and in
+  Compose, inference always runs the real `_RestGateway` over HTTP against the stdlib mock API
+  (`docker/mock-api/server.py`) — one code path everywhere, no bogus local-only branch
 - Real inference notebook's purpose (pipeline runs end to end) kept separate from model-quality testing (already covered in training notebook) via integration tests with injected test data
-- Open question: does folding local/offline inference entirely into Compose stubs lose a legitimate use case (quick checks, no-network environments)?
 
 **HTTP client**
 - Single `requests` Session, exponential backoff, default timeout
@@ -45,15 +54,43 @@
 - Chose: hash data + model, store as blobs in git; explicit write-up note that this doesn't scale, real system would use S3 + git as pointer/manifest only
 
 **Deployment — general**
-- Two-option proposal: lightweight serverless (Lambda/Fargate) vs. Databricks Jobs, since assignment explicitly offered a choice ("this or that") — read as a signal they want tradeoff reasoning, not just an executed pick
-- **Databricks now the primary recommendation**: native MLflow (tracking + model registry, zero setup), native job/run alerting, explicitly mentioned in the assignment
-- Lambda kept as the leaner alternative, partly to preserve visible evidence of his own systems-design thinking rather than leaning entirely on what Databricks gives for free
+- Decided: Docker-first, targets split **by workload**, not by platform. The images themselves stay
+  platform-neutral (see "Model loading" below), so where each one runs is a deploy-time choice, not
+  a code choice — this split *is* the tradeoff reasoning the assignment's "this or that" phrasing
+  was asking for
+  - Training → SageMaker Training Job or an ECS/Fargate task. Not Lambda: 15-minute execution cap,
+    no GPU, 10 GB image/`/tmp` limits. Fine against today's 20k-row CSV, doesn't generalise, and a
+    training run is exactly the kind of unbounded batch job Lambda is the wrong tool for
+  - Daily inference batch → Lambda container image. Seconds of compute, a ~2.5 MB model, one
+    invocation a day — cold start is irrelevant at that cadence, and the baked-in model (below)
+    avoids a per-invocation fetch
+- Databricks demoted from "primary recommendation" to named alternative: still attractive for its
+  native MLflow registry and Jobs alerting, but the container-first path above is now built and
+  running (`docker/`, `docker-compose.yml`), and Databricks Jobs run on managed clusters/env specs
+  rather than arbitrary containers — adopting it now means re-deriving the same image split for its
+  Container Services (which only customizes the cluster base image), not reusing what already works
+- SageMaker Model Registry / managed MLflow on SageMaker considered as the managed replacement for
+  the S3 + git-manifest versioning scheme noted above under "Data & model versioning" — declined for
+  now: it's an operational dependency this project doesn't need at 20k rows and a single model, and
+  the git-blob approach is already flagged as not scaling; revisit if the manifest scheme actually
+  becomes the bottleneck rather than pre-adopting it
 
-**Model loading — architectural fork**
-- Baking model into Docker image doesn't transfer to Databricks (Jobs run on managed clusters/env specs, not arbitrary containers; Container Services only customizes the cluster base image)
-- Lambda path: bake model into image as last layer (cold starts near-certain at daily frequency, so avoiding a network call matters more than decoupling releases)
-- Databricks path: pull model from MLflow model registry at job start
-- Service should fail fast / refuse to start if model unavailable — no fallback, no crash-loop
+**Model loading — platform-neutral by config, not by fork**
+- Resolved: no fork. `artifact_dir` is a plain config field (`inference/config.py:11`, mirrored on
+  `training`) consumed by `forecasting/artifacts.py:9`'s `verify_artifacts_present` and
+  `forecasting/model.py:17`'s `load_model` — neither function knows or cares whether the directory
+  is a baked image layer or a mounted volume
+- The inference image bakes the model into `/opt/model` as the last Dockerfile layer
+  (`docker/inference.Dockerfile`) — cold starts near-certain at daily-batch cadence, so avoiding a
+  network fetch on invocation matters more than decoupling model releases from image releases
+- The same image, unmodified, would instead read a SageMaker-mounted `/opt/ml/model` or any other
+  platform's mount point by overriding `INFERENCE_ARTIFACT_DIR` — one env var changes, zero code
+  changes
+- Databricks path (if ever taken): pull from the MLflow model registry at job start instead — still
+  just a different value for the same config field, backed by a different fetch step before the
+  process starts, not a different code path inside it
+- Service still fails fast / refuses to start if the model is unavailable — no fallback, no
+  crash-loop (`verify_artifacts_present`, unchanged)
 
 **Experiment tracking**
 - Databricks path: built-in MLflow (tracking + registry)
@@ -95,6 +132,10 @@
 **Still open / not yet addressed**
 - Rollback mechanism if a newly deployed model performs badly
 - Training reproducibility (seed pinning for model + train/test split)
+- Image reproducibility ≠ model reproducibility: digest-pinned base images and `uv sync --frozen`
+  (both Dockerfiles) make the *build environment* reproducible, not the *model* — without the seed
+  pinning above (`docs/TODO.md:68`), two image builds from the same commit can still train slightly
+  different models
 - Dependency/environment pinning (library versions) so dev/prod behavior doesn't silently diverge
 - Architecture diagram (Mermaid/draw.io/PNG) for solution design — required by task, not yet produced
 - Final submission packaging: repo link or ZIP + diagram + brief architecture notes, per task's "what to submit" section

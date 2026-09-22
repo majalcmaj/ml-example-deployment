@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from pydantic import SecretStr
 
 from inference import gateway
 from inference.config import Config
@@ -15,11 +14,7 @@ def make_config(**overrides: object) -> Config:
     defaults: dict[str, object] = {
         "source_endpoint_url": "https://example.invalid/api/recent-sales",
         "result_endpoint_url": "https://example.invalid/api/demand-forecast",
-        "secret_scope": "test-scope",
-        "secret_key": SecretStr("test-secret"),
-        "simulation_mode": False,
         "history_days": 45,
-        "data_dir": Path("data"),
         "artifact_dir": Path("outputs"),
         "output_dir": Path("outputs"),
     }
@@ -31,7 +26,7 @@ class FakeSecretsProvider:
     def __init__(self, token: str = "fake-token") -> None:
         self.token = token
 
-    def get_token(self, config: Config) -> str:  # noqa: ARG002 -- protocol conformance
+    def get_token(self) -> str:
         return self.token
 
 
@@ -62,15 +57,8 @@ class FakeSession:
         return self.response
 
 
-def test_make_gateway_simulation_mode_returns_simulated_gateway() -> None:
-    config = make_config(simulation_mode=True)
-    result = gateway.make_gateway(config)
-    assert isinstance(result, gateway._SimulatedGateway)
-    assert result.config is config
-
-
-def test_make_gateway_real_mode_injects_config_and_secrets_provider() -> None:
-    config = make_config(simulation_mode=False)
+def test_make_gateway_injects_config_and_secrets_provider() -> None:
+    config = make_config()
     secrets_provider = FakeSecretsProvider()
     result = gateway.make_gateway(config, secrets_provider=secrets_provider)
     assert isinstance(result, gateway._RestGateway)
@@ -113,26 +101,19 @@ def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() 
     assert call["json"] == {"predictions": []}
 
 
-def test_databricks_secrets_provider_raises_runtime_error_when_dbutils_undefined() -> None:
+def test_make_gateway_uses_env_secrets_provider_by_default() -> None:
     config = make_config()
-    provider = gateway._DatabricksSecretsProvider()
-    with pytest.raises(RuntimeError, match="Real API mode requires Databricks Secrets"):
-        provider.get_token(config)
+    result = gateway.make_gateway(config)
+    assert isinstance(result, gateway._RestGateway)
+    assert isinstance(result.secrets_provider, gateway._EnvSecretsProvider)
 
 
-def test_databricks_secrets_provider_does_not_mask_unrelated_name_errors(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class FakeSecretsClient:
-        def get(self, **_kwargs: object) -> str:
-            raise NameError("unrelated bug inside dbutils.secrets.get")
+def test_env_secrets_provider_reads_injected_env() -> None:
+    provider = gateway._EnvSecretsProvider({"INFERENCE_API_TOKEN": "env-token"})
+    assert provider.get_token() == "env-token"
 
-    class FakeDbutils:
-        secrets = FakeSecretsClient()
 
-    monkeypatch.setattr(gateway, "dbutils", FakeDbutils(), raising=False)
-    config = make_config()
-    provider = gateway._DatabricksSecretsProvider()
-
-    with pytest.raises(NameError, match="unrelated bug inside dbutils.secrets.get"):
-        provider.get_token(config)
+def test_env_secrets_provider_raises_when_token_unset() -> None:
+    provider = gateway._EnvSecretsProvider({})
+    with pytest.raises(RuntimeError, match="INFERENCE_API_TOKEN"):
+        provider.get_token()

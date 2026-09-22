@@ -34,8 +34,6 @@ testkit = { workspace = true }
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
-# Databricks injects these as globals at runtime; never defined locally.
-builtins = ["dbutils"]
 
 [tool.ruff.lint]
 extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]
@@ -43,6 +41,7 @@ extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]
 [tool.pyright]
 include = ["src"]
 exclude = ["**/*.ipynb", "**/outputs"]
+extraPaths = ["src/inference/tests"]
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
 
@@ -51,3 +50,4 @@ testpaths = ["src"]
 python_files = ["test_*.py", "*_test.py"]
 addopts = "--import-mode=importlib"
 markers = ["e2e: executes a notebook end-to-end"]
+pythonpath = ["src/inference/tests"]

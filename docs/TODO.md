@@ -11,10 +11,13 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks. Concretely: `training/daily_product_demand_forecast.py`'s "Predict incoming-day sales" block (placeholder row + `create_time_features` + `get_dummies`/`reindex`) duplicates `forecasting/features.py`'s `build_future_features()`/`encode_for_model()` almost line for line (training additionally carries `Lower_Bound`/`Upper_Bound`/`Is_Outlier` columns inference doesn't need). The *placement* half is done — the `package-split` plan moved this code into the `forecasting` library alongside training's reuse sites (each now carries a `TODO` naming its target); what remains is collapsing the three `get_dummies`+reindex sites, the two future-row blocks, the two clip/round blocks, and the two date×category panel builds into single implementations.
 - [ ] Unit tests: feature extraction correctness
 - [x] Integration tests: model output shape/columns against prepared data
-- [ ] End-to-end tests: full pipeline against Docker Compose mocks
+- [x] End-to-end tests: full pipeline against Docker Compose mocks — `make test-compose`
+  (`scripts/compose_smoke.sh`), wired into CI after `test-e2e` (phase 05)
 - [ ] Auto-generate data schema/contract at training time, version with model artifact, validate on both train + inference
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
-- [ ] Secret → vault abstraction (move off plain TOML field; base config refactor already done per git log)
+- [ ] Secret → vault abstraction — env-var backend shipped (`INFERENCE_API_TOKEN` read by
+  `_EnvSecretsProvider`, `SecretsProvider` seam retained, `_DatabricksSecretsProvider` deleted); an
+  AWS Secrets Manager / vault-backed implementation behind the same seam is still open
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
 - [ ] 28-day history check only bounds the pooled min/max date span (`preprocess.py`), not per-category contiguity — a category closed for several days mid-window still passes and gets zero-filled by `aggregate_per_category` instead of raised. Frame this as a data-drift / distribution guardrail (detect and reject fabricated zero-history), not a quick fix to the existing check.
 - [ ] Documentation: Improve readme, add runbooks (e.g. what happens when regression tests break - whether to accept change or investigate), add arch diagram
@@ -36,36 +39,53 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
   (both members installed together), so it can't run as part of the `make sync-inference`
   deploy-subset check; it's a slower dev/CI-only safety net layered on top of the per-member
   suites, not a replacement for them.
+
+  **Narrowed, not closed, by `make test-compose`** (phase 05): the Compose smoke test trains a
+  fresh model, feeds it straight into inference over the real HTTP path, and diffs the result
+  against `src/inference/tests/baseline/inference_next_day_forecast.csv` within `PREDICTION_ATOL`
+  — catching exactly the staleness case this item was written for (`scripts/compose_smoke.sh:5-8`
+  says so explicitly). What it *doesn't* give: this item's baseline-free design, so a drift that's
+  "wrong but within tolerance" of the stale baseline still passes; and it needs Docker, where a
+  workspace-level pytest wouldn't. Keeping this item open for the baseline-free, Docker-free
+  variant; `make test-compose` covers the CI-facing staleness risk in the meantime.
 - [ ] Categorical feature drift: alert on unknown/unseen category values
 - [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file)
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
+- [ ] POST retry above is now testable end to end: `docker/mock-api/server.py` gives it a real
+  local HTTP target (previously this needed hitting the real service to verify)
+- [ ] Strip matplotlib out of the training script rather than suppressing it — `MPLBACKEND=Agg`
+  (`docker/training.Dockerfile:42`) is the zero-code-change fix that stops the headless container
+  from crashing on `plt.show()` (`training/daily_product_demand_forecast.py:12,172,196-197,328-330`),
+  not a real solution; the plotting calls still run and do nothing in production
 - [ ] Persist inference input data keyed by request ID (for future ground-truth join)
-- [ ] `_SimulatedGateway.fetch_source_payload` globs every CSV in `data_dir` with no de-dup guard — latent today (one bundled CSV), but a second overlapping CSV would silently double-count sales
 - [ ] CI runner image (`ubuntu-24.04`, pinned in `.github/workflows/ci-cd.yml`) needs a periodic bump process — pinning trades `ubuntu-latest`'s silent-drift risk (e.g. the Sept 2026 in-place migration to Ubuntu 26 that `ubuntu-latest` would've absorbed automatically) for staleness risk if nobody revisits the pin
 
 **P2 — open questions**
-- [ ] Local/offline inference mode vs folding entirely into Compose stubs — keep or drop?
 - [ ] Honor `Retry-After` on 429; confirm mock API actually supports idempotency keys server-side
 - [ ] Separate one-off exploration from diagnostics that should run/log every training run — concretely: pull training notebook's inspect/validate EDA cell (`display(raw_sales.head())`, shape prints) out into its own scratch notebook, keep the training pipeline module free of exploration output
 - [ ] Note: metadata (`outlier_bounds`, `validation_metrics`, `model_feature_columns`, `categories`) is NOT a separable stage from training — outlier bounds are needed *before* fit (train_mask), validation metrics only exist *after* fit. Don't split it into its own workflow/notebook; it stays a byproduct of the training run. Ruled out this option when considering the training/inference notebook split.
 - [x] Does data/model need its own top-level module (vs current training/inference/common)? — Yes: the `package-split` plan extracted it as the `forecasting` library (plus `infra` for cross-cutting config/logging/context), splitting the former `common` junk drawer along a domain/infra seam.
 - [ ] Seed pinning for training reproducibility (model + train/test split)
 - [ ] Clean up `scripts/ast_similarity.py` (quick AST clone finder for training vs inference scripts): drop single-line/weight heuristics for something principled (e.g. min fingerprint length), add `argparse`, consider `--json` output; or delete it once the shared-feature-extraction P0 item lands and it has served its purpose
-- [ ] Pin dependency/environment versions (dev/prod parity)
+- [x] Pin dependency/environment versions (dev/prod parity) — digest-pinned `uv` and `python` base
+  images plus `uv sync --frozen` in both `docker/inference.Dockerfile` and
+  `docker/training.Dockerfile`
 
 ## Deliverable 2: Solution design doc
 
 **P0**
 - [ ] Architecture diagram (Mermaid/draw.io/PNG)
 - [ ] Databricks vs Lambda tradeoff write-up
-- [ ] Model loading strategy per platform (MLflow registry vs baked-into-image)
+- [x] Model loading strategy per platform (MLflow registry vs baked-into-image) — written up in
+  `docs/architecture.md` / `docs/what_if.md`
 - [ ] Drift/monitoring approach write-up
 - [ ] Alerting approach write-up (CloudWatch heartbeat / Databricks Jobs run-status)
 
 **P1**
 - [ ] Define latency SLA / perf monitoring for the query-side API (task requires low-latency lookups — currently undefined)
 - [ ] Note CI/CD gap for the codebase itself (tests/lint on PR, automated build/deploy) — distinct from training-as-CI/CD framing
-- [ ] Rollback mechanism if newly deployed model performs badly
+- [x] Rollback mechanism if newly deployed model performs badly — the image tag is the code+model
+  identity (model is baked in, `docs/planning.md`), so rollback is redeploying the previous tag
 - [ ] Note feature store deliberately skipped (shared `forecasting` library sufficient at this scale)
 - [ ] Data/model versioning approach + scaling caveat (git-blob hashing doesn't scale; real system = S3 + git pointer/manifest)
 
