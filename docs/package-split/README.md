@@ -38,6 +38,12 @@ inference ─┘
 TODO comments naming the `forecasting` functions that will absorb them. No training logic moves
 and no duplication is collapsed here — that is a follow-up plan.
 
+`.github/workflows/ci-cd.yml` (lint → test-unit → test-e2e → gated deploy) merged after this plan
+was drafted. It calls only `make lint`/`test-unit`/`test-e2e`/`sync`, none of which name a
+package path — confirmed via `grep -n common Makefile .github/workflows/ci-cd.yml` returning
+nothing — so no phase needs CI changes. Every phase's `make test` green requirement is what keeps
+that pipeline green too.
+
 **Hard invariant: every e2e baseline stays byte-identical.** These are file moves and import
 rewrites, nothing else. A baseline that shifts means a mistake was made, not that a baseline needs
 refreshing. No phase may run `make baseline-inference` or copy anything into a `tests/baseline/`

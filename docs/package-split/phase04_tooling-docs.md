@@ -36,10 +36,14 @@ libraries, `training` + `inference` are deployable apps, `testkit` is dev-only.
   half is done and only collapsing the three `get_dummies`+reindex sites, the two future-row
   blocks, the two clip/round blocks and the two panel builds remains. Update the quoted paths
   (`inference/features.py` → `forecasting/features.py`).
-- `:50` (P2, "Does data/model need its own top-level module?"): answer and close it —
+- `:51` (P2, "Does data/model need its own top-level module?"): answer and close it —
   `forecasting` is that module.
-- `:68` (P1 design-doc note, "shared `common` module sufficient at this scale" as the reason no
+- `:69` (P1 design-doc note, "shared `common` module sufficient at this scale" as the reason no
   feature store is needed): update the package name, keep the reasoning.
+
+(Line numbers above account for the CI/CD pipeline item now at `docs/TODO.md:44` — added by the
+merged `ci-cd-pipeline` PR after this plan was first drafted; it shifted everything below it down
+by one. That item itself names no package and needs no edit here.)
 
 **`docs/planning.md`** — `:34-36` ("UV project with `training`, `inference`, `common`… still
 deciding whether data/model concerns need their own top-level module") and `:27` (feature store
