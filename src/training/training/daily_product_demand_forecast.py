@@ -12,7 +12,13 @@ from typing import cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from common.consts import (
+    CATEGORY_COLUMN,
+    DATE_COLUMN,
+    METADATA_FILENAME,
+    MODEL_FILENAME,
+    TARGET_COLUMN,
+)
 from common.forecast_metadata import ForecastMetadata, ModelConfiguration
 from common.logger import get_logger
 from common.preprocessing import (
@@ -308,6 +314,11 @@ plt.show()
 # ## 11. Predict incoming-day sales by category
 # Append one placeholder row per product for the day after the latest observed date. Feature creation reads the real history through the prior day; the placeholder target itself is never used because all demand features are shifted. Predictions are rounded to whole units.
 
+# TODO: this placeholder-row + create_time_features block and the get_dummies + reindex block
+# below are near-duplicated in inference/features.py's build_future_features()/encode_for_model()
+# (minus the outlier columns, which inference doesn't carry). Share one implementation between
+# training and inference. Tracked in docs/TODO.md ("Single shared feature extraction
+# implementation").
 forecast_date = daily_sales[DATE_COLUMN].max() + pd.Timedelta(days=1)
 future_rows = pd.DataFrame(
     {
@@ -347,8 +358,8 @@ OUTPUT_DIR = CONFIG.output_dir
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 prediction_path = OUTPUT_DIR / "next_day_product_forecast.csv"
-model_path = OUTPUT_DIR / "xgb_daily_product_demand.json"
-metadata_path = OUTPUT_DIR / "forecast_metadata.joblib"
+model_path = OUTPUT_DIR / MODEL_FILENAME
+metadata_path = OUTPUT_DIR / METADATA_FILENAME
 
 next_day_forecast.to_csv(prediction_path, index=False)
 model.save_model(model_path)

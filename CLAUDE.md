@@ -58,9 +58,14 @@ that mechanism intact when touching config.
 
 ## Known drift / gotchas
 
-- The `.py` scripts are `nbconvert` exports of the `.ipynb` next to them (cell markers `# In[n]:`
-  kept). Tests run the **scripts**; the notebooks still exist. Do not edit the notebooks, you may check 
-  them for context.
+- The `.py` scripts started as `nbconvert` exports of the `.ipynb` next to them, but have since
+  diverged: `daily_product_demand_inference.py` was split into six modules (`gateway.py`,
+  `features.py`, `forecaster.py`, `preprocess.py`, `result_upload.py`, `model_loader.py`) and no
+  longer carries `# In[n]:` cell markers, and the training script has drifted the same way. Tests
+  run the **scripts**; the notebooks still exist but show stale logic (e.g. inline secret lookup,
+  dict-style artifact access) — treat them as historical reference only, not current design. Do
+  not edit the notebooks. They're slated for eventual removal from the repo (tracked in
+  `docs/TODO.md`); once gone, this note goes with them.
 - `make baseline-inference` runs the training script at repo root, copies model + metadata into
   inference's baseline dir, then runs `make test-inference`.
 - `outputs/` is gitignored; `data/coffeeshop_daily_sales_report.csv` is the only input and is committed.

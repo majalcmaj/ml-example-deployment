@@ -1,0 +1,138 @@
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
+
+import pytest
+from pydantic import SecretStr
+
+from inference import gateway
+from inference.config import Config
+
+if TYPE_CHECKING:
+    import requests
+
+
+def make_config(**overrides: object) -> Config:
+    defaults: dict[str, object] = {
+        "source_endpoint_url": "https://example.invalid/api/recent-sales",
+        "result_endpoint_url": "https://example.invalid/api/demand-forecast",
+        "secret_scope": "test-scope",
+        "secret_key": SecretStr("test-secret"),
+        "simulation_mode": False,
+        "history_days": 45,
+        "data_dir": Path("data"),
+        "artifact_dir": Path("outputs"),
+        "output_dir": Path("outputs"),
+    }
+    defaults.update(overrides)
+    return Config.model_validate(defaults)
+
+
+class FakeSecretsProvider:
+    def __init__(self, token: str = "fake-token") -> None:
+        self.token = token
+
+    def get_token(self, config: Config) -> str:  # noqa: ARG002 -- protocol conformance
+        return self.token
+
+
+class FakeResponse:
+    def __init__(self, status_code: int = 200, payload: dict | None = None) -> None:
+        self.status_code = status_code
+        self._payload = payload if payload is not None else {}
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> dict:
+        return self._payload
+
+
+class FakeSession:
+    def __init__(self, response: FakeResponse) -> None:
+        self.response = response
+        self.get_calls: list[dict] = []
+        self.post_calls: list[dict] = []
+
+    def get(self, url: str, headers: dict, params: dict) -> FakeResponse:
+        self.get_calls.append({"url": url, "headers": headers, "params": params})
+        return self.response
+
+    def post(self, url: str, headers: dict, json: dict) -> FakeResponse:
+        self.post_calls.append({"url": url, "headers": headers, "json": json})
+        return self.response
+
+
+def test_make_gateway_simulation_mode_returns_simulated_gateway() -> None:
+    config = make_config(simulation_mode=True)
+    result = gateway.make_gateway(config)
+    assert isinstance(result, gateway._SimulatedGateway)
+    assert result.config is config
+
+
+def test_make_gateway_real_mode_injects_config_and_secrets_provider() -> None:
+    config = make_config(simulation_mode=False)
+    secrets_provider = FakeSecretsProvider()
+    result = gateway.make_gateway(config, secrets_provider=secrets_provider)
+    assert isinstance(result, gateway._RestGateway)
+    assert result.config is config
+    assert result.secrets_provider is secrets_provider
+
+
+def test_rest_gateway_fetch_source_payload_uses_injected_config_and_token() -> None:
+    config = make_config(history_days=45)
+    response = FakeResponse(payload={"records": [{"a": 1}]})
+    session = FakeSession(response)
+    rest_gateway = gateway._RestGateway(
+        cast("requests.Session", session), config, FakeSecretsProvider("tok-123")
+    )
+
+    payload = rest_gateway.fetch_source_payload()
+
+    assert payload == {"records": [{"a": 1}]}
+    assert len(session.get_calls) == 1
+    call = session.get_calls[0]
+    assert call["url"] == str(config.source_endpoint_url)
+    assert call["headers"]["Authorization"] == "Bearer tok-123"
+    assert call["params"] == {"history_days": 45}
+
+
+def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() -> None:
+    config = make_config()
+    response = FakeResponse(payload={"status": "ok"})
+    session = FakeSession(response)
+    rest_gateway = gateway._RestGateway(
+        cast("requests.Session", session), config, FakeSecretsProvider("tok-456")
+    )
+
+    rest_gateway.upload_inference_results({"predictions": []})
+
+    assert len(session.post_calls) == 1
+    call = session.post_calls[0]
+    assert call["url"] == str(config.result_endpoint_url)
+    assert call["headers"]["Authorization"] == "Bearer tok-456"
+    assert call["json"] == {"predictions": []}
+
+
+def test_databricks_secrets_provider_raises_runtime_error_when_dbutils_undefined() -> None:
+    config = make_config()
+    provider = gateway._DatabricksSecretsProvider()
+    with pytest.raises(RuntimeError, match="Real API mode requires Databricks Secrets"):
+        provider.get_token(config)
+
+
+def test_databricks_secrets_provider_does_not_mask_unrelated_name_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeSecretsClient:
+        def get(self, **_kwargs: object) -> str:
+            raise NameError("unrelated bug inside dbutils.secrets.get")
+
+    class FakeDbutils:
+        secrets = FakeSecretsClient()
+
+    monkeypatch.setattr(gateway, "dbutils", FakeDbutils(), raising=False)
+    config = make_config()
+    provider = gateway._DatabricksSecretsProvider()
+
+    with pytest.raises(NameError, match="unrelated bug inside dbutils.secrets.get"):
+        provider.get_token(config)

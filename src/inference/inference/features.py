@@ -7,10 +7,17 @@ if TYPE_CHECKING:
     from common.forecast_metadata import ForecastMetadata
 
 
-def reconstruct_training_features(
+# TODO: build_future_features()'s placeholder-row + create_time_features() block and
+# encode_for_model()'s get_dummies + reindex-to-contract block are both near-duplicated in
+# src/training/training/daily_product_demand_forecast.py (see the matching TODO there). Share
+# one implementation between training and inference. Tracked in docs/TODO.md ("Single shared
+# feature extraction implementation").
+
+
+def build_future_features(
     latest_date: pd.Timestamp, metadata: ForecastMetadata, daily_sales: pd.DataFrame
-) -> tuple[pd.Timestamp, pd.DataFrame, pd.DataFrame]:
-    """Append the incoming day and calculate calendar, lag, and rolling features exactly as in training. Align the encoded columns to the stored model contract before predicting."""
+) -> pd.DataFrame:
+    """Append the incoming day and calculate calendar, lag, and rolling features exactly as in training."""
     model_config = metadata.configuration
     forecast_date = cast("pd.Timestamp", latest_date + pd.Timedelta(days=1))
     future_rows = pd.DataFrame(
@@ -22,10 +29,16 @@ def reconstruct_training_features(
     )
     history_and_future = pd.concat([daily_sales, future_rows], ignore_index=True)
     future_features = create_time_features(history_and_future)
-    future_features = future_features.loc[
+    return future_features.loc[
         future_features[model_config.date_column] == forecast_date
     ].copy()
 
+
+def encode_for_model(
+    future_features: pd.DataFrame, metadata: ForecastMetadata
+) -> pd.DataFrame:
+    """Align the encoded columns to the stored model contract before predicting."""
+    model_config = metadata.configuration
     X_future = pd.get_dummies(
         future_features[metadata.raw_feature_columns],
         columns=[model_config.category_column],
@@ -36,4 +49,4 @@ def reconstruct_training_features(
         raise ValueError(
             "Recent sales did not provide enough history to calculate every model feature."
         )
-    return forecast_date, future_features, X_future
+    return X_future

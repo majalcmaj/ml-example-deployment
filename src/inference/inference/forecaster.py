@@ -13,13 +13,13 @@ if TYPE_CHECKING:
 
 
 def make_forecast(
-    ARTIFACT_DIR: Path,
+    artifact_dir: Path,
     future_features: pd.DataFrame,
     X_future: pd.DataFrame,
     model_config: ModelConfiguration,
 ) -> pd.DataFrame:
     log = get_logger(__name__)
-    model = load_model(ARTIFACT_DIR)
+    model = load_model(artifact_dir)
     predicted_quantities = np.rint(np.clip(model.predict(X_future), 0, None)).astype(
         int
     )

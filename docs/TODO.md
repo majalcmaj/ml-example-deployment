@@ -8,7 +8,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] Move hardcoded constants into TOML config
 - [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [x] Regression tests
-- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks
+- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks. Concretely: `training/daily_product_demand_forecast.py`'s "Predict incoming-day sales" block (placeholder row + `create_time_features` + `get_dummies`/`reindex`) duplicates `inference/features.py`'s `build_future_features()`/`encode_for_model()` almost line for line (training additionally carries `Lower_Bound`/`Upper_Bound`/`Is_Outlier` columns inference doesn't need). Extract the shared parts into `common`.
 - [ ] Unit tests: feature extraction correctness
 - [x] Integration tests: model output shape/columns against prepared data
 - [ ] End-to-end tests: full pipeline against Docker Compose mocks
@@ -16,6 +16,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
 - [ ] Secret → vault abstraction (move off plain TOML field; base config refactor already done per git log)
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
+- [ ] 28-day history check only bounds the pooled min/max date span (`preprocess.py`), not per-category contiguity — a category closed for several days mid-window still passes and gets zero-filled by `aggregate_per_category` instead of raised. Frame this as a data-drift / distribution guardrail (detect and reject fabricated zero-history), not a quick fix to the existing check.
 - [ ] Documentation: Improve readme, add runbooks (e.g. what happens when regression tests break - whether to accept change or investigate), add arch diagram
 
 **P1**
@@ -39,6 +40,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file)
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
 - [ ] Persist inference input data keyed by request ID (for future ground-truth join)
+- [ ] `_SimulatedGateway.fetch_source_payload` globs every CSV in `data_dir` with no de-dup guard — latent today (one bundled CSV), but a second overlapping CSV would silently double-count sales
 
 **P2 — open questions**
 - [ ] Local/offline inference mode vs folding entirely into Compose stubs — keep or drop?
@@ -73,3 +75,6 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Package repo link or ZIP
 - [ ] Attach diagram + brief architecture notes
 - [ ] Reference original notebooks' git commit in README so they stay discoverable
+- [ ] Delete the `.ipynb` notebooks from the working tree once the README references their git
+  commit (item above) — they've drifted from the `.py` scripts and CLAUDE.md's "Known drift"
+  note about them should be removed in the same change

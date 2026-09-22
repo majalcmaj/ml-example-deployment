@@ -13,6 +13,7 @@ def validate_required_columns_present(sales: pd.DataFrame) -> None:
 
 # TODO: consider splitting
 def columns_to_expected_types(sales: pd.DataFrame) -> pd.DataFrame:
+    sales = sales.copy()
     sales[DATE_COLUMN] = pd.to_datetime(sales[DATE_COLUMN], errors="coerce")
     sales[TARGET_COLUMN] = pd.to_numeric(sales[TARGET_COLUMN], errors="coerce")
     sales[CATEGORY_COLUMN] = (
