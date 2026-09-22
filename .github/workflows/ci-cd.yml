@@ -1,0 +1,79 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: make sync
+      - run: make lint
+
+  test-unit:
+    needs: lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: make sync
+      - run: make test-unit
+
+  test-e2e:
+    needs: test-unit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: make sync
+      - run: make test-e2e
+
+  # main: staging -> prod, each a manual-approval gate (configure required reviewers once in
+  # repo Settings -> Environments -> staging / production).
+  deploy-staging:
+    needs: test-e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+      - run: make deploy-staging
+
+  deploy-prod:
+    needs: deploy-staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: prod
+    steps:
+      - uses: actions/checkout@v7
+      - run: make deploy-prod
+
+  # feature branches: ephemeral per-branch dev deploy. Deliberately ungated — anyone can deploy
+  # to dev, only staging/prod require manual review. environment: dev-<branch> exists purely for
+  # per-branch isolation/visibility in the Deployments UI, not as an approval gate; do not add
+  # required reviewers to these envs.
+  deploy-dev:
+    needs: test-e2e
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: dev-${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: make deploy-dev BRANCH=${{ github.ref_name }}

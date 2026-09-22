@@ -41,6 +41,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
 - [ ] Persist inference input data keyed by request ID (for future ground-truth join)
 - [ ] `_SimulatedGateway.fetch_source_payload` globs every CSV in `data_dir` with no de-dup guard — latent today (one bundled CSV), but a second overlapping CSV would silently double-count sales
+- [ ] CI runner image (`ubuntu-24.04`, pinned in `.github/workflows/ci-cd.yml`) needs a periodic bump process — pinning trades `ubuntu-latest`'s silent-drift risk (e.g. the Sept 2026 in-place migration to Ubuntu 26 that `ubuntu-latest` would've absorbed automatically) for staleness risk if nobody revisits the pin
 
 **P2 — open questions**
 - [ ] Local/offline inference mode vs folding entirely into Compose stubs — keep or drop?
