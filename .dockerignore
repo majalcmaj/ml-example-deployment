@@ -1,0 +1,10 @@
+.venv/
+.git/
+.claude/
+**/__pycache__/
+*.ipynb
+.ipynb_checkpoints/
+docs/
+dist/
+build/
+*.egg-info/
