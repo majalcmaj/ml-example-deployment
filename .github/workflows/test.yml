@@ -1,0 +1,40 @@
+name: CI/CD (test + dev deploy)
+
+# Feature branches / PRs: automatic lint/test/compose-smoke, then dev deploy as the last stage,
+# gated by a manual approval on the `dev` GH Environment (Settings -> Environments -> dev ->
+# Required reviewers — configure this once; it's what actually blocks the job, not this file).
+#
+# Deploy only fires on `push` (not `pull_request` — PRs, especially from forks, shouldn't
+# auto-deploy). `environment: dev` is a single static environment so the approval gate exists from
+# the very first deploy on any branch; per-branch isolation instead comes from `BRANCH=` passed
+# into `make deploy-dev`, same as before — the branch never needed its own GH Environment object
+# to stay isolated from other users' deploys.
+#
+# main is excluded here — pushes to main go through deploy-main.yml instead, which runs the same
+# reusable pipeline (via ci-cd.yml) plus the staging/prod deploys, so main never gets tested twice
+# for one push and never shows a dev deploy job.
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/ci-cd.yml
+
+  deploy-dev:
+    needs: tests
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: dev
+    steps:
+      - uses: actions/checkout@v7
+      - run: make deploy-dev BRANCH=${{ github.ref_name }}
