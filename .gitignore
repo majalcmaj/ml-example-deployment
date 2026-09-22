@@ -13,5 +13,9 @@ wheels/
 # Model, params
 outputs/
 
+# Coverage
+.coverage
+htmlcov/
+
 # Agent stuff
 .claude

@@ -28,6 +28,10 @@ test-inference:  ## Inference package tests
 test-training:  ## Training package tests
 	uv run --package training pytest src/training
 
+.PHONY: test-coverage
+test-coverage:  ## Full suite w/ coverage report (src/*, terminal + htmlcov/)
+	uv run pytest --cov=src --cov-report=term-missing --cov-report=html
+
 .PHONY: test-mutation
 test-mutation:  ## Prove e2e suites catch regressions (scripts/mutation_check.sh)
 	./scripts/mutation_check.sh
