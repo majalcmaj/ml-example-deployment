@@ -617,8 +617,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pydantic" },
     { name = "requests" },
-    { name = "scikit-learn" },
-    { name = "xgboost" },
+    { name = "urllib3" },
 ]
 
 [package.dev-dependencies]
@@ -633,8 +632,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "requests", specifier = ">=2.32" },
-    { name = "scikit-learn", specifier = ">=1.9.0" },
-    { name = "xgboost", specifier = ">=3.4.1" },
+    { name = "urllib3" },
 ]
 
 [package.metadata.requires-dev]
@@ -2231,9 +2229,10 @@ source = { editable = "src/training" }
 dependencies = [
     { name = "forecasting" },
     { name = "infra" },
-    { name = "joblib" },
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
+    { name = "pydantic" },
     { name = "scikit-learn" },
     { name = "xgboost" },
 ]
@@ -2247,9 +2246,10 @@ dev = [
 requires-dist = [
     { name = "forecasting", editable = "src/forecasting" },
     { name = "infra", editable = "src/infra" },
-    { name = "joblib", specifier = ">=1.6.0" },
     { name = "matplotlib", specifier = ">=3.11.1" },
+    { name = "numpy" },
     { name = "pandas", specifier = ">=3.0.5" },
+    { name = "pydantic", specifier = ">=2.13.5" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
     { name = "xgboost", specifier = ">=3.4.1" },
 ]

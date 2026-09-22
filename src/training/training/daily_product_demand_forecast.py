@@ -45,6 +45,9 @@ pd.set_option("display.max_columns", 50)
 
 # ## 2. Load CSV files
 # Find the project data directory, load every CSV with pandas, label its source, and combine all rows.
+# Note: this CSV glob+concat is similar to inference/gateway.py:111-115's, but deliberately left
+# duplicated — different semantics (full history + Source_File tag vs. recent window -> JSON
+# records), ~6 lines, and sharing it would couple an app to an app.
 
 
 def load_training_data(data_dir: Path) -> pd.DataFrame:
@@ -105,7 +108,9 @@ log.info(f"Product categories: {sales[CATEGORY_COLUMN].nunique()}")
 
 # ## 5. Aggregate daily sales by category
 # Sum repeated rows for each day and product. Then create every date-product combination; when a product is absent on a day, interpret it as zero units sold.
-# TODO: compare this with the preprocessing in the inference flow. How much can be sensibly extracted to common/?
+# TODO: this date x category panel build is near-duplicated in inference/preprocess.py:55-86.
+# Extract a shared panel helper into forecasting. Tracked in docs/TODO.md ("Single shared
+# feature extraction implementation").
 daily_sales = (
     sales.groupby([DATE_COLUMN, CATEGORY_COLUMN], as_index=False)[TARGET_COLUMN]
     .sum()
@@ -226,6 +231,9 @@ validation_mask = featured_sales[DATE_COLUMN] >= validation_start
 
 train_data = featured_sales.loc[train_mask].copy()
 validation_data = featured_sales.loc[validation_mask].copy()
+# TODO: this get_dummies + reindex pair is near-duplicated at forecasting.features.encode_for_model
+# and again below for the future frame. Share one implementation. Tracked in docs/TODO.md
+# ("Single shared feature extraction implementation").
 X_train = pd.get_dummies(
     train_data[feature_columns], columns=[CATEGORY_COLUMN], dtype=int
 )
@@ -324,11 +332,10 @@ plt.show()
 # ## 11. Predict incoming-day sales by category
 # Append one placeholder row per product for the day after the latest observed date. Feature creation reads the real history through the prior day; the placeholder target itself is never used because all demand features are shifted. Predictions are rounded to whole units.
 
-# TODO: this placeholder-row + create_time_features block and the get_dummies + reindex block
-# below are near-duplicated in inference/features.py's build_future_features()/encode_for_model()
-# (minus the outlier columns, which inference doesn't carry). Share one implementation between
-# training and inference. Tracked in docs/TODO.md ("Single shared feature extraction
-# implementation").
+# TODO: this placeholder-row + create_time_features block is near-duplicated at
+# forecasting.features.build_future_features (minus the outlier columns, which inference doesn't
+# carry). Share one implementation between training and inference. Tracked in docs/TODO.md
+# ("Single shared feature extraction implementation").
 forecast_date = daily_sales[DATE_COLUMN].max() + pd.Timedelta(days=1)
 future_rows = pd.DataFrame(
     {
@@ -346,10 +353,15 @@ future_features = future_features.loc[
     future_features[DATE_COLUMN] == forecast_date
 ].copy()
 
+# TODO: this get_dummies + reindex pair is near-duplicated at forecasting.features.encode_for_model.
+# Tracked in docs/TODO.md ("Single shared feature extraction implementation").
 X_future = pd.get_dummies(
     future_features[feature_columns], columns=[CATEGORY_COLUMN], dtype=int
 )
 X_future = X_future.reindex(columns=X_train.columns, fill_value=0)
+# TODO: this clip + rint + forecast-frame block is near-duplicated at
+# forecasting.model.make_forecast. Tracked in docs/TODO.md ("Single shared feature extraction
+# implementation").
 future_predictions = np.clip(model.predict(X_future), 0, None)
 
 next_day_forecast = future_features[[DATE_COLUMN, CATEGORY_COLUMN]].copy()
@@ -372,6 +384,9 @@ model_path = OUTPUT_DIR / MODEL_FILENAME
 metadata_path = OUTPUT_DIR / METADATA_FILENAME
 
 next_day_forecast.to_csv(prediction_path, index=False)
+# TODO: forecasting.model already owns the read side of the artifact contract (load_model); it
+# should own the write side too. Tracked in docs/TODO.md ("Single shared feature extraction
+# implementation").
 model.save_model(model_path)
 
 artifacts = ForecastMetadata(
