@@ -34,9 +34,7 @@ def payload_to_dataframe(source_payload: dict) -> pd.DataFrame:
     return pd.DataFrame.from_records(source_records)
 
 
-def preprocess_data(
-    metadata: ForecastMetadata, sales: pd.DataFrame
-) -> tuple[pd.Timestamp, pd.DataFrame]:
+def preprocess_data(metadata: ForecastMetadata, sales: pd.DataFrame) -> pd.DataFrame:
     """Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features."""
     log = get_logger(__name__)
     validate_required_columns_present(sales)
@@ -94,4 +92,4 @@ def preprocess_data(
         len(metadata.categories),
     )
 
-    return latest_date, daily_sales
+    return daily_sales

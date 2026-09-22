@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from common.context import init_context
 from common.forecast_metadata import ForecastMetadata
@@ -52,7 +52,10 @@ def main(
     config: Config, sales_gateway: SalesGateway, metadata: ForecastMetadata
 ) -> None:
     recent_sales = _obtain_recent_sales(sales_gateway)
-    latest_date, daily_sales = preprocess_data(metadata, recent_sales)
+    daily_sales = preprocess_data(metadata, recent_sales)
+    latest_date = cast(
+        "pd.Timestamp", daily_sales[metadata.configuration.date_column].max()
+    )
 
     forecast_date, future_features, X_future = reconstruct_training_features(
         latest_date, metadata, daily_sales
