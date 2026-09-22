@@ -17,9 +17,7 @@ def make_config(**overrides: object) -> Config:
         "result_endpoint_url": "https://example.invalid/api/demand-forecast",
         "secret_scope": "test-scope",
         "secret_key": SecretStr("test-secret"),
-        "simulation_mode": False,
         "history_days": 45,
-        "data_dir": Path("data"),
         "artifact_dir": Path("outputs"),
         "output_dir": Path("outputs"),
     }
@@ -62,15 +60,8 @@ class FakeSession:
         return self.response
 
 
-def test_make_gateway_simulation_mode_returns_simulated_gateway() -> None:
-    config = make_config(simulation_mode=True)
-    result = gateway.make_gateway(config)
-    assert isinstance(result, gateway._SimulatedGateway)
-    assert result.config is config
-
-
-def test_make_gateway_real_mode_injects_config_and_secrets_provider() -> None:
-    config = make_config(simulation_mode=False)
+def test_make_gateway_injects_config_and_secrets_provider() -> None:
+    config = make_config()
     secrets_provider = FakeSecretsProvider()
     result = gateway.make_gateway(config, secrets_provider=secrets_provider)
     assert isinstance(result, gateway._RestGateway)

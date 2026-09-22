@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=212889adb18e50e9eb08a0d8b5a839fd6a6a7f3c; date=2026-09-22 -->
 # Phase 01 — config-file-override
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 212889adb18e50e9eb08a0d8b5a839fd6a6a7f3c (2026-09-22)
 
 Read `docs/docker-deploy/prompt.md` first.
 

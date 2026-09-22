@@ -14,14 +14,16 @@ cd "$(git rev-parse --show-toplevel)"
 # | 4 | inference baseline csv: first prediction += 10              | src/inference                 |
 # | 5 | inference forecast_metadata.joblib renamed away             | src/inference (fail-fast)     |
 # | 6 | inference config.toml: artifact_dir -> "nowhere"            | inference config_test.py      |
+# | 7 | result_upload.py: predicted_quantity int(...) -> int(...)+1 | src/inference (upload payload) |
 
 FEATURES="src/forecasting/forecasting/features.py"
 TRAINING_BASELINE="src/training/tests/baseline/next_day_product_forecast.csv"
 INFERENCE_BASELINE="src/inference/tests/baseline/inference_next_day_forecast.csv"
 INFERENCE_METADATA="src/inference/tests/baseline/forecast_metadata.joblib"
 INFERENCE_CONFIG="src/inference/inference/config.toml"
+RESULT_UPLOAD="src/inference/inference/result_upload.py"
 
-MUTATED_FILES=("$FEATURES" "$TRAINING_BASELINE" "$INFERENCE_BASELINE" "$INFERENCE_METADATA" "$INFERENCE_CONFIG")
+MUTATED_FILES=("$FEATURES" "$TRAINING_BASELINE" "$INFERENCE_BASELINE" "$INFERENCE_METADATA" "$INFERENCE_CONFIG" "$RESULT_UPLOAD")
 
 if [[ -n "$(git status --porcelain -- "${MUTATED_FILES[@]}")" ]]; then
     echo "ABORT: uncommitted changes in files this script mutates -- commit or stash first." >&2
@@ -85,6 +87,10 @@ mutate 5 "$INFERENCE_METADATA" \
 mutate 6 "$INFERENCE_CONFIG" \
     "sed -i 's/artifact_dir = \"outputs\"/artifact_dir = \"nowhere\"/' $INFERENCE_CONFIG" \
     "src/inference/inference/config_test.py"
+
+mutate 7 "$RESULT_UPLOAD" \
+    "sed -i 's/predicted_quantity=int(cast(\"int\", row\[\"Predicted_Qty\"\]))/predicted_quantity=int(cast(\"int\", row[\"Predicted_Qty\"])) + 1/' $RESULT_UPLOAD" \
+    "src/inference -m e2e"
 
 if [[ "$SURVIVORS" -gt 0 ]]; then
     echo "$SURVIVORS mutation(s) survived" >&2

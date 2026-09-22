@@ -9,9 +9,7 @@ class Config(BaseModel):
     result_endpoint_url: HttpUrl
     secret_scope: str
     secret_key: SecretStr
-    simulation_mode: bool
     history_days: PositiveInt
-    data_dir: Path
     artifact_dir: Path
     output_dir: Path
     model_config = ConfigDict(frozen=True)
