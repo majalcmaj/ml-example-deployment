@@ -37,23 +37,18 @@ class _EnvSecretsProvider:
         return token
 
 
-# TODO: This wrapper is not needed anymore. Move default arg to the construcor of the class, make it public and use directly
-def make_gateway(
-    config: Config, secrets_provider: SecretsProvider | None = None
-) -> SalesGateway:
-    """Sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. The endpoint must supply at least 28 calendar days of history."""  # move to class
-    return _RestGateway(
-        create_http_session(), config, secrets_provider or _EnvSecretsProvider()
-    )
+class RestGateway:
+    """Sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. The endpoint must supply at least 28 calendar days of history."""
 
-
-class _RestGateway:
     def __init__(
-        self, http: requests.Session, config: Config, secrets_provider: SecretsProvider
+        self,
+        config: Config,
+        secrets_provider: SecretsProvider | None = None,
+        http: requests.Session | None = None,
     ) -> None:
-        self.http = http
+        self.http = http or create_http_session()
         self.config = config
-        self.secrets_provider = secrets_provider
+        self.secrets_provider = secrets_provider or _EnvSecretsProvider()
 
     def _request_headers(self) -> dict:
         return {

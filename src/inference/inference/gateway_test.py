@@ -57,11 +57,11 @@ class FakeSession:
         return self.response
 
 
-def test_make_gateway_injects_config_and_secrets_provider() -> None:
+def test_rest_gateway_injects_config_and_secrets_provider() -> None:
     config = make_config()
     secrets_provider = FakeSecretsProvider()
-    result = gateway.make_gateway(config, secrets_provider=secrets_provider)
-    assert isinstance(result, gateway._RestGateway)
+    result = gateway.RestGateway(config, secrets_provider=secrets_provider)
+    assert isinstance(result, gateway.RestGateway)
     assert result.config is config
     assert result.secrets_provider is secrets_provider
 
@@ -70,8 +70,8 @@ def test_rest_gateway_fetch_source_payload_uses_injected_config_and_token() -> N
     config = make_config(history_days=45)
     response = FakeResponse(payload={"records": [{"a": 1}]})
     session = FakeSession(response)
-    rest_gateway = gateway._RestGateway(
-        cast("requests.Session", session), config, FakeSecretsProvider("tok-123")
+    rest_gateway = gateway.RestGateway(
+        config, FakeSecretsProvider("tok-123"), cast("requests.Session", session)
     )
 
     payload = rest_gateway.fetch_source_payload()
@@ -88,8 +88,8 @@ def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() 
     config = make_config()
     response = FakeResponse(payload={"status": "ok"})
     session = FakeSession(response)
-    rest_gateway = gateway._RestGateway(
-        cast("requests.Session", session), config, FakeSecretsProvider("tok-456")
+    rest_gateway = gateway.RestGateway(
+        config, FakeSecretsProvider("tok-456"), cast("requests.Session", session)
     )
 
     rest_gateway.upload_inference_results({"predictions": []})
@@ -101,10 +101,10 @@ def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() 
     assert call["json"] == {"predictions": []}
 
 
-def test_make_gateway_uses_env_secrets_provider_by_default() -> None:
+def test_rest_gateway_uses_env_secrets_provider_by_default() -> None:
     config = make_config()
-    result = gateway.make_gateway(config)
-    assert isinstance(result, gateway._RestGateway)
+    result = gateway.RestGateway(config)
+    assert isinstance(result, gateway.RestGateway)
     assert isinstance(result.secrets_provider, gateway._EnvSecretsProvider)
 
 

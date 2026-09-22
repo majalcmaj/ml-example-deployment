@@ -1,2 +1,3 @@
 data_dir   = "/var/forecast/data"
 output_dir = "/var/forecast/outputs"
+validation_days = 30

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 class Config(BaseModel):
     data_dir: Path
     output_dir: Path
+    validation_days: int
     model_config = ConfigDict(frozen=True)
 
 

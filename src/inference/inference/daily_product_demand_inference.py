@@ -13,7 +13,7 @@ from inference.result_upload import upload_inference_results
 from infra import logger
 
 init_context()
-from inference.gateway import SalesGateway, make_gateway
+from inference.gateway import RestGateway, SalesGateway
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -70,4 +70,4 @@ def run(config: Config, sales_gateway: SalesGateway) -> None:
 
 
 if __name__ == "__main__":
-    run(CONFIG, make_gateway(CONFIG))
+    run(CONFIG, RestGateway(CONFIG))

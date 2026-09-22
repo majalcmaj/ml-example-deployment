@@ -33,6 +33,13 @@ def create_time_features(data: pd.DataFrame) -> pd.DataFrame:
     return featured
 
 
+def history_feature_columns(featured: pd.DataFrame) -> list[str]:
+    """Names of the lag/rolling columns `create_time_features` added, in column order."""
+    return [
+        column for column in featured.columns if column.startswith(("Lag_", "Rolling_"))
+    ]
+
+
 def build_future_features(
     latest_date: pd.Timestamp, metadata: ForecastMetadata, daily_sales: pd.DataFrame
 ) -> pd.DataFrame:

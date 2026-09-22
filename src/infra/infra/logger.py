@@ -1,4 +1,5 @@
-from logging import INFO, Formatter, Logger, LoggerAdapter, StreamHandler, getLogger
+import os
+from logging import Formatter, Logger, LoggerAdapter, StreamHandler, getLogger
 
 from infra.context import CORRELATION_ID
 
@@ -11,7 +12,7 @@ def get_logger(name: str) -> LoggerAdapter[Logger]:
         "%(asctime)s [%(levelname)s] %(correlation_id)s (%(name)s): %(message)s"
     )
     syslog.setFormatter(formatter)
-    logger.setLevel(INFO)
+    logger.setLevel(os.environ.get("LOG_LEVEL", "INFO").upper())
     logger.addHandler(syslog)
 
     return LoggerAdapter(logger, extra)
