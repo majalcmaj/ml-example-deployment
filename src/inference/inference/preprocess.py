@@ -20,7 +20,8 @@ def payload_to_dataframe(source_payload: dict) -> pd.DataFrame:
         source_records = source_payload
 
     elif isinstance(source_payload, dict):
-        source_records = source_payload.get("records", source_payload.get("data"))
+        records = source_payload.get("records")
+        source_records = records if records is not None else source_payload.get("data")
 
     else:
         source_records = None
