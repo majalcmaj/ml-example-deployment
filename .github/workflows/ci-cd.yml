@@ -65,26 +65,15 @@ jobs:
       - uses: actions/checkout@v4
       - run: make deploy-prod
 
-  # feature branches: dev (manual-approval gate, configure once) -> ephemeral per-branch deploy
-  # (auto, gated behind deploy-dev's approval, own dynamic environment for isolation/visibility).
+  # feature branches: ephemeral per-branch dev deploy, gated by its own environment's required
+  # reviewers. Environment is dynamic (dev-<branch>) for isolation, so each new branch's
+  # auto-created env needs reviewers configured on it individually for the gate to pause
+  # (no shared "dev" gate to inherit from anymore).
   deploy-dev:
     needs: test-e2e
     if: github.event_name == 'push' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment: dev
-    outputs:
-      branch_slug: ${{ steps.slug.outputs.slug }}
+    environment: dev-${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
-      - id: slug
-        run: echo "slug=$(printf '%s' '${{ github.ref_name }}' | tr -c 'a-zA-Z0-9-' '-' | tr 'A-Z' 'a-z')" >> "$GITHUB_OUTPUT"
-      - run: make deploy-dev
-
-  deploy-dev-ephemeral:
-    needs: deploy-dev
-    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: dev-${{ needs.deploy-dev.outputs.branch_slug }}
-    steps:
-      - uses: actions/checkout@v4
-      - run: make deploy-dev-ephemeral BRANCH=${{ github.ref_name }}
+      - run: make deploy-dev BRANCH=${{ github.ref_name }}
