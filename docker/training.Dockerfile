@@ -34,13 +34,7 @@ FROM python:3.14-slim-bookworm@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de
 
 RUN useradd --create-home --uid 10001 app
 
-# training/daily_product_demand_forecast.py calls plt.show() twice; with no display, matplotlib's
-# default interactive backend hangs/errors in a headless container. Agg is the non-interactive
-# raster backend -- the calls still run and render nothing, which is fine since we don't ship the
-# plots. Real fix (tracked in docs/TODO.md) is stripping the plotting calls out of the pipeline
-# script entirely; this env var is the zero-code-change stopgap.
-ENV MPLBACKEND=Agg \
-    TRAINING_CONFIG_FILE=/etc/forecast/training.toml \
+ENV TRAINING_CONFIG_FILE=/etc/forecast/training.toml \
     PATH="/app/.venv/bin:$PATH"
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv

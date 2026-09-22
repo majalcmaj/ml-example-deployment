@@ -33,13 +33,6 @@ def create_time_features(data: pd.DataFrame) -> pd.DataFrame:
     return featured
 
 
-# TODO: build_future_features()'s placeholder-row + create_time_features() block and
-# encode_for_model()'s get_dummies + reindex-to-contract block are both near-duplicated in
-# src/training/training/daily_product_demand_forecast.py (see the matching TODO there). Share
-# one implementation between training and inference. Tracked in docs/TODO.md ("Single shared
-# feature extraction implementation").
-
-
 def build_future_features(
     latest_date: pd.Timestamp, metadata: ForecastMetadata, daily_sales: pd.DataFrame
 ) -> pd.DataFrame:
@@ -60,19 +53,29 @@ def build_future_features(
     ].copy()
 
 
-def encode_for_model(
-    future_features: pd.DataFrame, metadata: ForecastMetadata
+def one_hot_encode_categories(
+    data: pd.DataFrame, columns: list[str], category_column: str
 ) -> pd.DataFrame:
-    """Align the encoded columns to the stored model contract before predicting."""
-    model_config = metadata.configuration
-    X_future = pd.get_dummies(
-        future_features[metadata.raw_feature_columns],
-        columns=[model_config.category_column],
-        dtype=int,
-    )
-    X_future = X_future.reindex(columns=metadata.model_feature_columns, fill_value=0)
-    if X_future.isna().any().any():
+    return pd.get_dummies(data[columns], columns=[category_column], dtype=int)
+
+
+def reindex_to_contract(
+    encoded: pd.DataFrame, model_feature_columns: list[str]
+) -> pd.DataFrame:
+    """Align encoded columns to a stored model contract, failing on gaps left by insufficient history."""
+    reindexed = encoded.reindex(columns=model_feature_columns, fill_value=0)
+    if reindexed.isna().any().any():
         raise ValueError(
             "Recent sales did not provide enough history to calculate every model feature."
         )
-    return X_future
+    return reindexed
+
+
+def encode_for_model(
+    future_features: pd.DataFrame, metadata: ForecastMetadata
+) -> pd.DataFrame:
+    model_config = metadata.configuration
+    encoded = one_hot_encode_categories(
+        future_features, metadata.raw_feature_columns, model_config.category_column
+    )
+    return reindex_to_contract(encoded, metadata.model_feature_columns)

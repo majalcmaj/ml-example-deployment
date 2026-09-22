@@ -25,6 +25,10 @@ def load_model(artifact_dir: Path) -> XGBRegressor:
     return model
 
 
+def save_model(model: XGBRegressor, artifact_dir: Path) -> None:
+    model.save_model(artifact_dir / MODEL_FILENAME)
+
+
 def make_forecast(
     artifact_dir: Path,
     future_features: pd.DataFrame,

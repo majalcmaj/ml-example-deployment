@@ -109,8 +109,6 @@ that mechanism intact when touching config.
 - `make baseline-inference` runs the training script at repo root, copies model + metadata into
   inference's baseline dir, then runs `make test-inference`.
 - `outputs/` is gitignored; `data/coffeeshop_daily_sales_report.csv` is the only input and is committed.
-- `training/daily_product_demand_forecast.py` calls `plt.show()` twice; headless containers need
-  `MPLBACKEND=Agg` (set in `docker/training.Dockerfile`) or it hangs/errors with no display.
 - The inference image bakes a model into `/opt/model` at build time (`ARG MODEL_DIR`); set
   `INFERENCE_ARTIFACT_DIR` to point elsewhere at runtime. Compose demonstrates this by mounting a
   freshly-trained model over `/opt/model` from the shared `model-artifacts` volume.

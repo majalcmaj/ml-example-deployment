@@ -8,7 +8,15 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] Move hardcoded constants into TOML config
 - [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [x] Regression tests
-- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks. Concretely: `training/daily_product_demand_forecast.py`'s "Predict incoming-day sales" block (placeholder row + `create_time_features` + `get_dummies`/`reindex`) duplicates `forecasting/features.py`'s `build_future_features()`/`encode_for_model()` almost line for line (training additionally carries `Lower_Bound`/`Upper_Bound`/`Is_Outlier` columns inference doesn't need). The *placement* half is done — the `package-split` plan moved this code into the `forecasting` library alongside training's reuse sites (each now carries a `TODO` naming its target); what remains is collapsing the three `get_dummies`+reindex sites, the two future-row blocks, the two clip/round blocks, and the two date×category panel builds into single implementations.
+- [x] Single shared feature extraction implementation (training + inference) — `training` now calls
+  `forecasting.features.build_future_features`/`encode_for_model` and `forecasting.model.make_forecast`
+  directly instead of duplicating them (reordered to save the model + build `ForecastMetadata`
+  before the next-day-forecast step, since `make_forecast` reloads the model from disk).
+  `encode_for_model` was split into `one_hot_encode_categories`/`reindex_to_contract` so training's
+  pre-fit `X_train`/`X_validation` encoding (which needs a `ForecastMetadata` that doesn't exist yet)
+  can share the same primitives too. Still open: the two date×category panel builds
+  (`training/preprocess.py` vs `inference/preprocess.py`) remain separate — not addressed by this
+  pass.
 - [ ] Unit tests: feature extraction correctness
 - [x] Integration tests: model output shape/columns against prepared data
 - [x] End-to-end tests: full pipeline against Docker Compose mocks — `make test-compose`
@@ -53,10 +61,12 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
 - [ ] POST retry above is now testable end to end: `docker/mock-api/server.py` gives it a real
   local HTTP target (previously this needed hitting the real service to verify)
-- [ ] Strip matplotlib out of the training script rather than suppressing it — `MPLBACKEND=Agg`
-  (`docker/training.Dockerfile:42`) is the zero-code-change fix that stops the headless container
-  from crashing on `plt.show()` (`training/daily_product_demand_forecast.py:12,172,196-197,328-330`),
-  not a real solution; the plotting calls still run and do nothing in production
+- [x] Strip matplotlib out of the training script rather than suppressing it — both `plt.show()`
+  blocks (outlier before/after chart, actual-vs-predicted daily chart) removed; the `matplotlib`
+  dependency and `MPLBACKEND=Agg` (`docker/training.Dockerfile`) stopgap are gone. Underlying stats
+  (outlier counts, IQR bounds, MAE/RMSE/WMAPE) are still logged and saved into `ForecastMetadata`;
+  ad-hoc visual exploration belongs in a disposable scratch notebook, not the production script —
+  no MLflow/artifact-tracker exists in this repo to make a saved PNG useful.
 - [ ] Persist inference input data keyed by request ID (for future ground-truth join)
 - [ ] CI runner image (`ubuntu-24.04`, pinned in `.github/workflows/ci-cd.yml`) needs a periodic bump process — pinning trades `ubuntu-latest`'s silent-drift risk (e.g. the Sept 2026 in-place migration to Ubuntu 26 that `ubuntu-latest` would've absorbed automatically) for staleness risk if nobody revisits the pin
 
