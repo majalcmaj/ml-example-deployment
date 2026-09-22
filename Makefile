@@ -36,6 +36,11 @@ test-mutation:  ## Prove e2e suites catch regressions (scripts/mutation_check.sh
 type-check:  ## pyright over src (catches return-type mismatches ruff misses)
 	uv run pyright
 
+.PHONY: lint
+lint:  ## ruff check + pyright (static checks only, no tests)
+	uv run ruff check
+	$(MAKE) type-check
+
 .PHONY: check
 check:  ## ruff check + pyright + full test suite
 	uv run ruff check
@@ -69,3 +74,22 @@ baseline-inference:  ## Regenerate inference baseline model + metadata from fres
 .PHONY: code-duplication-check
 code-duplication-check:  ## AST similarity between training and inference scripts
 	uv run scripts/ast_similarity.py src/inference/inference/daily_product_demand_inference.py src/training/training/daily_product_demand_forecast.py
+
+# Deploy stages are stubs: no infra exists yet (no Dockerfile/k8s/deploy scripts), these just
+# stand in for the real thing so the CD pipeline shape (gates, environments) is wired up now.
+.PHONY: deploy-staging
+deploy-staging:  ## [stub] Deploy to staging
+	@echo "[stub] would deploy $$(git rev-parse --short HEAD) to staging — no real deploy logic yet"
+
+.PHONY: deploy-prod
+deploy-prod:  ## [stub] Deploy to prod
+	@echo "[stub] would deploy $$(git rev-parse --short HEAD) to prod — no real deploy logic yet"
+
+.PHONY: deploy-dev
+deploy-dev:  ## [stub] Deploy to shared dev environment (gate before per-branch ephemeral deploy)
+	@echo "[stub] would deploy $$(git rev-parse --short HEAD) to dev — no real deploy logic yet"
+
+BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+.PHONY: deploy-dev-ephemeral
+deploy-dev-ephemeral:  ## [stub] Per-branch ephemeral dev deployment (BRANCH=<name> to override)
+	@echo "[stub] would deploy $$(git rev-parse --short HEAD) to ephemeral env dev-$$(printf '%s' '$(BRANCH)' | tr -c 'a-zA-Z0-9-' '-' | tr 'A-Z' 'a-z') — no real deploy logic yet"
