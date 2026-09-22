@@ -75,3 +75,6 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Package repo link or ZIP
 - [ ] Attach diagram + brief architecture notes
 - [ ] Reference original notebooks' git commit in README so they stay discoverable
+- [ ] Delete the `.ipynb` notebooks from the working tree once the README references their git
+  commit (item above) — they've drifted from the `.py` scripts and CLAUDE.md's "Known drift"
+  note about them should be removed in the same change
