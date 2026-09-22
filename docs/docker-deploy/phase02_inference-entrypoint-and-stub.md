@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=fde8319c2e01bff8022121bed8cdc294a2567e23; date=2026-09-22 -->
 # Phase 02 — inference-entrypoint-and-stub
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — fde8319c2e01bff8022121bed8cdc294a2567e23 (2026-09-22)
 
 Read `docs/docker-deploy/prompt.md` first.
 
