@@ -101,21 +101,19 @@ def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() 
     assert call["json"] == {"predictions": []}
 
 
-def test_make_gateway_uses_env_secrets_provider_by_default(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("INFERENCE_API_TOKEN", "env-token")
+def test_make_gateway_uses_env_secrets_provider_by_default() -> None:
     config = make_config()
     result = gateway.make_gateway(config)
     assert isinstance(result, gateway._RestGateway)
     assert isinstance(result.secrets_provider, gateway._EnvSecretsProvider)
-    assert result.secrets_provider.get_token() == "env-token"
 
 
-def test_env_secrets_provider_raises_when_token_unset(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("INFERENCE_API_TOKEN", raising=False)
-    provider = gateway._EnvSecretsProvider()
+def test_env_secrets_provider_reads_injected_env() -> None:
+    provider = gateway._EnvSecretsProvider({"INFERENCE_API_TOKEN": "env-token"})
+    assert provider.get_token() == "env-token"
+
+
+def test_env_secrets_provider_raises_when_token_unset() -> None:
+    provider = gateway._EnvSecretsProvider({})
     with pytest.raises(RuntimeError, match="INFERENCE_API_TOKEN"):
         provider.get_token()

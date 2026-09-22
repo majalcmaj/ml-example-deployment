@@ -1,6 +1,9 @@
 import os
 from typing import TYPE_CHECKING, Any, Protocol
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
 import requests
 
 from inference.http_session import create_http_session
@@ -22,8 +25,11 @@ class SecretsProvider(Protocol):
 
 
 class _EnvSecretsProvider:
+    def __init__(self, env: Mapping[str, str] = os.environ) -> None:
+        self._env = env
+
     def get_token(self) -> str:
-        token = os.environ.get("INFERENCE_API_TOKEN")
+        token = self._env.get("INFERENCE_API_TOKEN")
         if not token:
             raise RuntimeError(
                 "INFERENCE_API_TOKEN is not set; the source API cannot be authenticated."

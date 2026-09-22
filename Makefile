@@ -56,6 +56,10 @@ compose-up:  ## Run the local Compose stack (train -> serve -> infer -> upload)
 compose-down:  ## Tear down the local Compose stack and its volumes
 	docker compose down -v --remove-orphans
 
+.PHONY: compose-retrain
+compose-retrain:  ## Rerun training only (it exits after one run) without touching mock-api/inference
+	docker compose run --rm training
+
 .PHONY: test-compose
 test-compose:  ## Full pipeline against the Compose stack, diffed against the inference baseline
 	./scripts/compose_smoke.sh

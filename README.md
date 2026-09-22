@@ -32,16 +32,13 @@ Each member installs independently, without the other members' dependencies — 
 
 ## Building and running the container images
 
-- `make images` builds all three images (`make image-inference`, `make image-training`,
-  `make image-mock-api` individually). `image-inference` trains first if `outputs/` has no model
-  yet, since the image bakes a model in at build time.
-- `make compose-up` runs the local Compose stack end to end: the mock API comes up, training
-  writes a model into a shared volume, then inference consumes it, calls the mock API, and writes
-  the forecast.
-- `make test-compose` runs that same stack and diffs the result against the committed inference
-  baseline — this is also a CI job, so it catches a stale baseline model independently of the
-  per-member unit/e2e suites.
-- `make compose-down` tears the stack (and its volumes) down.
+`make help` lists every image/Compose target (`image-*`, `compose-up`, `compose-retrain`,
+`compose-down`, `test-compose`) with a one-line description each — that list is the source of
+truth, not this section. The two things worth knowing that aren't obvious from a target name
+alone: `image-inference` bakes a model into the image at build time and trains first if
+`outputs/` has no model yet; and Compose's `training` service exits after one run
+(`restart: "no"`), so `make compose-retrain` is how you rerun it without rebuilding or restarting
+`mock-api`/`inference`.
 
 ## Deployment shape
 

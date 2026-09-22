@@ -28,18 +28,4 @@ chmod 777 outputs
 
 docker compose up --build --abort-on-container-exit --exit-code-from inference
 
-uv run python3 -c "
-import pandas as pd
-from testkit.asserts import PREDICTION_ATOL, assert_columns_equal, assert_frame_within_tolerance
-
-actual = pd.read_csv('outputs/inference_next_day_forecast.csv')
-expected = pd.read_csv('src/inference/tests/baseline/inference_next_day_forecast.csv')
-
-assert_columns_equal(actual, expected)
-assert_frame_within_tolerance(
-    actual.loc[:, ['Predicted_Qty']],
-    expected.loc[:, ['Predicted_Qty']],
-    atol=PREDICTION_ATOL,
-)
-print('compose smoke: predictions within tolerance')
-"
+uv run python3 scripts/compose_smoke_check.py

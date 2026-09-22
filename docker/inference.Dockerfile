@@ -4,6 +4,13 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 
 # --- layer 1: third-party dependencies (changes rarely) ---
+# `uv.lock` is one file for the whole workspace, so `uv sync --frozen` needs every member's
+# pyproject.toml present to resolve against it -- even members this image never installs.
+# Only their *manifests* are copied here, not their source (that comes in layer 2, source-only,
+# per package); `--package inference` below still means only inference + its deps land in
+# /app/.venv. A per-package lockfile would let us skip copying training's/testkit's manifests,
+# but uv workspaces don't support that split, and duplicating lockfiles by hand would reintroduce
+# the version-drift problem workspaces exist to prevent -- not worth it for a few COPY lines.
 COPY uv.lock pyproject.toml ./
 COPY src/infra/pyproject.toml       src/infra/pyproject.toml
 COPY src/forecasting/pyproject.toml src/forecasting/pyproject.toml

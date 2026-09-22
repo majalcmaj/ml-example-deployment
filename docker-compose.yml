@@ -11,6 +11,9 @@ services:
       timeout: 2s
       retries: 15
 
+  # Runs once and exits (writes the model into model-artifacts, then stops) -- there's no
+  # scheduling here, this is a local dev stack. To rerun training on its own, without rebuilding
+  # or restarting mock-api/inference, use `make compose-retrain` (docker compose run --rm training).
   training:
     build:
       context: .

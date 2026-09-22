@@ -24,11 +24,10 @@ def test_load_config_from_toml(tmp_path: Path) -> None:
     assert model.simulation_mode is True
 
 
-def test_load_config_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_config_env_override(tmp_path: Path) -> None:
     toml_path = tmp_path / "config.toml"
     _write_toml(toml_path)
-    monkeypatch.setenv("X_DATA_DIR", "/tmp/elsewhere")
-    model = load_config(_Model, toml_path, env_prefix="X")
+    model = load_config(_Model, toml_path, env_prefix="X", env={"X_DATA_DIR": "/tmp/elsewhere"})
     assert model.data_dir == Path("/tmp/elsewhere")
 
 
@@ -58,32 +57,27 @@ def test_find_project_root_falls_back_to_start(tmp_path: Path) -> None:
     assert find_project_root(isolated) == isolated
 
 
-def test_load_config_file_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_config_file_override(tmp_path: Path) -> None:
     packaged = tmp_path / "packaged.toml"
     _write_toml(packaged)
     override = tmp_path / "override.toml"
     override.write_text('data_dir = "elsewhere"\nsimulation_mode = false\n')
-    monkeypatch.setenv("X_CONFIG_FILE", str(override))
-    model = load_config(_Model, packaged, env_prefix="X")
+    model = load_config(
+        _Model, packaged, env_prefix="X", env={"X_CONFIG_FILE": str(override)}
+    )
     assert model.simulation_mode is False
 
 
-def test_load_config_file_override_unset_uses_packaged_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.delenv("X_CONFIG_FILE", raising=False)
+def test_load_config_file_override_unset_uses_packaged_path(tmp_path: Path) -> None:
     packaged = tmp_path / "packaged.toml"
     _write_toml(packaged)
-    model = load_config(_Model, packaged, env_prefix="X")
+    model = load_config(_Model, packaged, env_prefix="X", env={})
     assert model.simulation_mode is True
 
 
-def test_load_config_file_override_missing_raises_with_path_and_var(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_load_config_file_override_missing_raises_with_path_and_var(tmp_path: Path) -> None:
     packaged = tmp_path / "packaged.toml"
     _write_toml(packaged)
     missing = tmp_path / "does-not-exist.toml"
-    monkeypatch.setenv("X_CONFIG_FILE", str(missing))
     with pytest.raises(FileNotFoundError, match=r"X_CONFIG_FILE.*does-not-exist\.toml"):
-        load_config(_Model, packaged, env_prefix="X")
+        load_config(_Model, packaged, env_prefix="X", env={"X_CONFIG_FILE": str(missing)})
