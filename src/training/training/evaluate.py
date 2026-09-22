@@ -2,7 +2,12 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pandas as pd
-from forecasting.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from forecasting.consts import (
+    CATEGORY_COLUMN,
+    DATE_COLUMN,
+    PREDICTED_QTY_COLUMN,
+    TARGET_COLUMN,
+)
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 if TYPE_CHECKING:
@@ -15,18 +20,18 @@ def evaluate_predictions(
     """Report MAE, RMSE, and WMAPE overall and by category against the validation window."""
     predictions = np.clip(model.predict(X_validation), 0, None)
     evaluation = validation_data[[DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN]].copy()
-    evaluation["Predicted_Qty"] = predictions
+    evaluation[PREDICTED_QTY_COLUMN] = predictions
     evaluation["Absolute_Error"] = cast(
-        "pd.Series", evaluation[TARGET_COLUMN] - evaluation["Predicted_Qty"]
+        "pd.Series", evaluation[TARGET_COLUMN] - evaluation[PREDICTED_QTY_COLUMN]
     ).abs()
 
     overall_metrics = pd.Series(
         {
             "MAE": mean_absolute_error(
-                evaluation[TARGET_COLUMN], evaluation["Predicted_Qty"]
+                evaluation[TARGET_COLUMN], evaluation[PREDICTED_QTY_COLUMN]
             ),
             "RMSE": mean_squared_error(
-                evaluation[TARGET_COLUMN], evaluation["Predicted_Qty"]
+                evaluation[TARGET_COLUMN], evaluation[PREDICTED_QTY_COLUMN]
             )
             ** 0.5,
             "WMAPE_Percent": 100
@@ -43,7 +48,9 @@ def evaluate_predictions(
                 {
                     "MAE": group["Absolute_Error"].mean(),
                     "RMSE": np.sqrt(
-                        np.mean((group[TARGET_COLUMN] - group["Predicted_Qty"]) ** 2)
+                        np.mean(
+                            (group[TARGET_COLUMN] - group[PREDICTED_QTY_COLUMN]) ** 2
+                        )
                     ),
                     "WMAPE_Percent": 100
                     * group["Absolute_Error"].sum()

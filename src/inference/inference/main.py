@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, cast
 
 from forecasting.artifacts import verify_artifacts_present
-from forecasting.consts import METADATA_FILENAME
+from forecasting.consts import METADATA_FILENAME, PREDICTED_QTY_COLUMN
 from forecasting.features import build_future_features, encode_for_model
 from forecasting.metadata import ForecastMetadata
 from forecasting.model import make_forecast
@@ -38,7 +38,7 @@ def _make_forecast_timed(
 def _record_forecast_metrics(metrics: MetricsCollector, forecast: pd.DataFrame) -> None:
     metrics.record("forecast_rows", len(forecast))
     metrics.record(
-        "forecast_total_units", cast("float", forecast["Predicted_Qty"].sum())
+        "forecast_total_units", cast("float", forecast[PREDICTED_QTY_COLUMN].sum())
     )
 
 
@@ -72,7 +72,7 @@ def main(
 
     upload_inference_results(sales_gateway, forecast_date, forecast, metadata)
 
-    forecast[[metadata.configuration.category_column, "Predicted_Qty"]].to_csv(
+    forecast[[metadata.configuration.category_column, PREDICTED_QTY_COLUMN]].to_csv(
         config.output_dir / "inference_next_day_forecast.csv", index=False
     )
 

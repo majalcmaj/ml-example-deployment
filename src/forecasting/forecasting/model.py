@@ -4,7 +4,7 @@ import numpy as np
 from infra.logger import get_logger
 from xgboost import XGBRegressor
 
-from forecasting.consts import MODEL_FILENAME
+from forecasting.consts import MODEL_FILENAME, PREDICTED_QTY_COLUMN
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,6 +46,6 @@ def make_forecast(
             [model_config.date_column, model_config.category_column]
         ].copy(),
     )
-    forecast["Predicted_Qty"] = predicted_quantities
-    log.info("Forecast total units: %d", forecast["Predicted_Qty"].sum())
+    forecast[PREDICTED_QTY_COLUMN] = predicted_quantities
+    log.info("Forecast total units: %d", forecast[PREDICTED_QTY_COLUMN].sum())
     return forecast.sort_values(model_config.category_column).reset_index(drop=True)

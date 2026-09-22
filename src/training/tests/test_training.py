@@ -5,6 +5,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import pytest
+from forecasting.consts import PREDICTED_QTY_COLUMN
 from testkit.asserts import (
     BOUND_RTOL,
     METRIC_RTOL,
@@ -54,7 +55,7 @@ def test_predictions_within_tolerance(run_root: Path) -> None:
     actual = pd.read_csv(run_root / "outputs" / "next_day_product_forecast.csv")
     expected = pd.read_csv(BASELINE_DIR / "next_day_product_forecast.csv")
     assert_frame_within_tolerance(
-        actual.loc[:, ["Predicted_Qty"]],
-        expected.loc[:, ["Predicted_Qty"]],
+        actual.loc[:, [PREDICTED_QTY_COLUMN]],
+        expected.loc[:, [PREDICTED_QTY_COLUMN]],
         atol=PREDICTION_ATOL,
     )

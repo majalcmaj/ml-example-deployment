@@ -4,7 +4,16 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 
-from forecasting.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from forecasting.consts import (
+    CATEGORY_COLUMN,
+    DATE_COLUMN,
+    DAY_OF_MONTH_COLUMN,
+    DAY_OF_WEEK_COLUMN,
+    DAY_OF_YEAR_COLUMN,
+    IS_WEEKEND_COLUMN,
+    MONTH_COLUMN,
+    TARGET_COLUMN,
+)
 
 if TYPE_CHECKING:
     from forecasting.metadata import ForecastMetadata
@@ -12,11 +21,11 @@ if TYPE_CHECKING:
 
 def create_time_features(data: pd.DataFrame) -> pd.DataFrame:
     featured = data.sort_values([CATEGORY_COLUMN, DATE_COLUMN]).copy()
-    featured["Day_Of_Week"] = featured[DATE_COLUMN].dt.dayofweek
-    featured["Month"] = featured[DATE_COLUMN].dt.month
-    featured["Day_Of_Month"] = featured[DATE_COLUMN].dt.day
-    featured["Day_Of_Year"] = featured[DATE_COLUMN].dt.dayofyear
-    featured["Is_Weekend"] = featured["Day_Of_Week"].isin([5, 6]).astype(int)
+    featured[DAY_OF_WEEK_COLUMN] = featured[DATE_COLUMN].dt.dayofweek
+    featured[MONTH_COLUMN] = featured[DATE_COLUMN].dt.month
+    featured[DAY_OF_MONTH_COLUMN] = featured[DATE_COLUMN].dt.day
+    featured[DAY_OF_YEAR_COLUMN] = featured[DATE_COLUMN].dt.dayofyear
+    featured[IS_WEEKEND_COLUMN] = featured[DAY_OF_WEEK_COLUMN].isin([5, 6]).astype(int)
     grouped_sales = featured.groupby(CATEGORY_COLUMN)[TARGET_COLUMN]
     for lag in [1, 7, 14, 28]:
         featured[f"Lag_{lag}"] = grouped_sales.shift(lag)

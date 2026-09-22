@@ -5,6 +5,7 @@ rather than an inline `python3 -c "..."` block in bash.
 """
 
 import pandas as pd
+from forecasting.consts import PREDICTED_QTY_COLUMN
 from testkit.asserts import (
     PREDICTION_ATOL,
     assert_columns_equal,
@@ -21,8 +22,8 @@ def main() -> None:
 
     assert_columns_equal(actual, expected)
     assert_frame_within_tolerance(
-        actual.loc[:, ["Predicted_Qty"]],
-        expected.loc[:, ["Predicted_Qty"]],
+        actual.loc[:, [PREDICTED_QTY_COLUMN]],
+        expected.loc[:, [PREDICTED_QTY_COLUMN]],
         atol=PREDICTION_ATOL,
     )
     print("compose smoke: predictions within tolerance")

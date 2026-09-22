@@ -7,6 +7,7 @@ from datetime import (  # noqa: TC003 -- pydantic resolves field types at runtim
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
+from forecasting.consts import PREDICTED_QTY_COLUMN
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ def upload_inference_results(
         predictions=[
             CategoryPrediction(
                 category=str(row[metadata.configuration.category_column]),
-                predicted_quantity=int(cast("int", row["Predicted_Qty"])),
+                predicted_quantity=int(cast("int", row[PREDICTED_QTY_COLUMN])),
             )
             for _, row in forecast.iterrows()
         ],

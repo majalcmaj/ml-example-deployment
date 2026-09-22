@@ -3,5 +3,12 @@ CATEGORY_COLUMN = "Menu"
 TARGET_COLUMN = "Total_Qty"
 REQUIRED_COLUMNS = {DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN}
 
+PREDICTED_QTY_COLUMN = "Predicted_Qty"
+DAY_OF_WEEK_COLUMN = "Day_Of_Week"
+MONTH_COLUMN = "Month"
+DAY_OF_MONTH_COLUMN = "Day_Of_Month"
+DAY_OF_YEAR_COLUMN = "Day_Of_Year"
+IS_WEEKEND_COLUMN = "Is_Weekend"
+
 MODEL_FILENAME = "xgb_daily_product_demand.json"
 METADATA_FILENAME = "forecast_metadata.joblib"

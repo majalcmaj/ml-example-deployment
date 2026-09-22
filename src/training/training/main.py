@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING, cast
 from forecasting.consts import (
     CATEGORY_COLUMN,
     DATE_COLUMN,
+    DAY_OF_MONTH_COLUMN,
+    DAY_OF_WEEK_COLUMN,
+    DAY_OF_YEAR_COLUMN,
+    IS_WEEKEND_COLUMN,
     METADATA_FILENAME,
+    MONTH_COLUMN,
     TARGET_COLUMN,
 )
 from forecasting.features import (
@@ -105,11 +110,11 @@ def _prepare_data(config: Config) -> PreparedData:
 
     feature_columns = [
         CATEGORY_COLUMN,
-        "Day_Of_Week",
-        "Month",
-        "Day_Of_Month",
-        "Day_Of_Year",
-        "Is_Weekend",
+        DAY_OF_WEEK_COLUMN,
+        MONTH_COLUMN,
+        DAY_OF_MONTH_COLUMN,
+        DAY_OF_YEAR_COLUMN,
+        IS_WEEKEND_COLUMN,
         *history_features,
     ]
     train_data, validation_data = split_train_validation(

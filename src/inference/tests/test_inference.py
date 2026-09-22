@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 import pytest
+from forecasting.consts import PREDICTED_QTY_COLUMN
 from testkit.asserts import (
     PREDICTION_ATOL,
     assert_columns_equal,
@@ -26,8 +27,8 @@ def test_predictions_match_baseline(run_root: tuple[Path, StubSalesGateway]) -> 
 
     assert_columns_equal(actual, expected)
     assert_frame_within_tolerance(
-        actual.loc[:, ["Predicted_Qty"]],
-        expected.loc[:, ["Predicted_Qty"]],
+        actual.loc[:, [PREDICTED_QTY_COLUMN]],
+        expected.loc[:, [PREDICTED_QTY_COLUMN]],
         atol=PREDICTION_ATOL,
     )
 
@@ -44,7 +45,7 @@ def test_uploaded_payload_matches_csv(run_root: tuple[Path, StubSalesGateway]) -
         p["category"]: p["predicted_quantity"] for p in payload["predictions"]
     }
     csv_by_category = dict(
-        zip(csv_forecast["Menu"], csv_forecast["Predicted_Qty"], strict=True)
+        zip(csv_forecast["Menu"], csv_forecast[PREDICTED_QTY_COLUMN], strict=True)
     )
     assert uploaded_by_category == csv_by_category
 
