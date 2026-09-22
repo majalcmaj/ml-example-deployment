@@ -1,12 +1,14 @@
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import pandas as pd
 import requests
 from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 
 from common import logger
-from inference.config import CONFIG, Config
 from inference.http_session import create_http_session
+
+if TYPE_CHECKING:
+    from inference.config import Config
 
 log = logger.get_logger(__name__)
 
@@ -16,41 +18,53 @@ class SalesGateway(Protocol):
     def upload_inference_results(self, payload: dict) -> None: ...
 
 
-def make_gateway(config: Config) -> SalesGateway:
+class SecretsProvider(Protocol):
+    def get_token(self, config: Config) -> str: ...
+
+
+class _DatabricksSecretsProvider:
+    def get_token(self, config: Config) -> str:
+        try:
+            dbutils_module = dbutils  # pyright: ignore[reportUndefinedVariable]
+        except NameError as error:
+            raise RuntimeError("Real API mode requires Databricks Secrets.") from error
+        return dbutils_module.secrets.get(
+            scope=config.secret_scope,
+            key=config.secret_key.get_secret_value(),
+        )
+
+
+def make_gateway(
+    config: Config, secrets_provider: SecretsProvider | None = None
+) -> SalesGateway:
     """Real mode sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. Simulation mode creates the same payload from the latest bundled CSV records. The endpoint must supply at least 28 calendar days of history."""
     if config.simulation_mode:
-        return _SimulatedGateway()
-    return _RestGateway(create_http_session())
-
-
-def _get_api_token() -> str:
-    try:
-        # This will fail when not on Databricks - abstract away
-        return dbutils.secrets.get(  # pyright: ignore[reportUndefinedVariable]
-            scope=CONFIG.secret_scope,
-            key=CONFIG.secret_key.get_secret_value(),
-        )
-    except NameError as error:
-        raise RuntimeError("Real API mode requires Databricks Secrets.") from error
-
-
-def _request_headers() -> dict:
-    return {
-        "Authorization": f"Bearer {_get_api_token()}",
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
+        return _SimulatedGateway(config)
+    return _RestGateway(
+        create_http_session(), config, secrets_provider or _DatabricksSecretsProvider()
+    )
 
 
 class _RestGateway:
-    def __init__(self, http: requests.Session) -> None:
+    def __init__(
+        self, http: requests.Session, config: Config, secrets_provider: SecretsProvider
+    ) -> None:
         self.http = http
+        self.config = config
+        self.secrets_provider = secrets_provider
+
+    def _request_headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.secrets_provider.get_token(self.config)}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
 
     def fetch_source_payload(self) -> dict[str, Any]:
         response = self.http.get(
-            str(CONFIG.source_endpoint_url),
-            headers=_request_headers(),
-            params={"history_days": CONFIG.history_days},
+            str(self.config.source_endpoint_url),
+            headers=self._request_headers(),
+            params={"history_days": self.config.history_days},
         )
         response.raise_for_status()
         source_payload = response.json()
@@ -59,8 +73,8 @@ class _RestGateway:
 
     def upload_inference_results(self, payload: dict) -> None:
         response = self.http.post(
-            str(CONFIG.result_endpoint_url),
-            headers=_request_headers(),
+            str(self.config.result_endpoint_url),
+            headers=self._request_headers(),
             json=payload,
         )
         response.raise_for_status()
@@ -80,8 +94,11 @@ class _RestGateway:
 
 
 class _SimulatedGateway:
+    def __init__(self, config: Config) -> None:
+        self.config = config
+
     def fetch_source_payload(self) -> dict[str, Any]:
-        data_directory = CONFIG.data_dir
+        data_directory = self.config.data_dir
 
         if not data_directory.exists():
             raise FileNotFoundError(
@@ -102,7 +119,7 @@ class _SimulatedGateway:
 
         recent_sales = simulated_sales.loc[
             simulated_sales[DATE_COLUMN]
-            >= latest_date - pd.Timedelta(days=CONFIG.history_days - 1),
+            >= latest_date - pd.Timedelta(days=self.config.history_days - 1),
             [DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN],
         ].copy()
 
