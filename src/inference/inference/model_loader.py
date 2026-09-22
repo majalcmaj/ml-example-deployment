@@ -5,9 +5,11 @@ from xgboost import XGBRegressor
 if TYPE_CHECKING:
     from pathlib import Path
 
+MODEL_FILENAME = "xgb_daily_product_demand.json"
+
 
 def load_model(artifact_dir: Path) -> XGBRegressor:
-    model_path = artifact_dir / "xgb_daily_product_demand.json"
+    model_path = artifact_dir / MODEL_FILENAME
 
     if not model_path.exists():
         raise FileNotFoundError(f"The trained model is missing from {artifact_dir}.")
