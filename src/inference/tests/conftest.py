@@ -23,8 +23,6 @@ def run_root(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, StubSalesG
     config = Config.model_validate({
         "source_endpoint_url": "https://example.invalid/api/recent-sales",
         "result_endpoint_url": "https://example.invalid/api/demand-forecast",
-        "secret_scope": "test-scope",
-        "secret_key": "test-secret",
         "history_days": 60,
         "artifact_dir": outputs,
         "output_dir": outputs,

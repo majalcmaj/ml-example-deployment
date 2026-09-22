@@ -34,8 +34,6 @@ testkit = { workspace = true }
 
 [tool.ruff]
 extend-exclude = ["*.ipynb"]
-# Databricks injects these as globals at runtime; never defined locally.
-builtins = ["dbutils"]
 
 [tool.ruff.lint]
 extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]

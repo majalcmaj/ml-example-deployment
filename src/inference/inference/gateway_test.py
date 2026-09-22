@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from pydantic import SecretStr
 
 from inference import gateway
 from inference.config import Config
@@ -15,8 +14,6 @@ def make_config(**overrides: object) -> Config:
     defaults: dict[str, object] = {
         "source_endpoint_url": "https://example.invalid/api/recent-sales",
         "result_endpoint_url": "https://example.invalid/api/demand-forecast",
-        "secret_scope": "test-scope",
-        "secret_key": SecretStr("test-secret"),
         "history_days": 45,
         "artifact_dir": Path("outputs"),
         "output_dir": Path("outputs"),
@@ -29,7 +26,7 @@ class FakeSecretsProvider:
     def __init__(self, token: str = "fake-token") -> None:
         self.token = token
 
-    def get_token(self, config: Config) -> str:  # noqa: ARG002 -- protocol conformance
+    def get_token(self) -> str:
         return self.token
 
 
@@ -104,26 +101,21 @@ def test_rest_gateway_upload_inference_results_uses_injected_config_and_token() 
     assert call["json"] == {"predictions": []}
 
 
-def test_databricks_secrets_provider_raises_runtime_error_when_dbutils_undefined() -> None:
-    config = make_config()
-    provider = gateway._DatabricksSecretsProvider()
-    with pytest.raises(RuntimeError, match="Real API mode requires Databricks Secrets"):
-        provider.get_token(config)
-
-
-def test_databricks_secrets_provider_does_not_mask_unrelated_name_errors(
+def test_make_gateway_uses_env_secrets_provider_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    class FakeSecretsClient:
-        def get(self, **_kwargs: object) -> str:
-            raise NameError("unrelated bug inside dbutils.secrets.get")
-
-    class FakeDbutils:
-        secrets = FakeSecretsClient()
-
-    monkeypatch.setattr(gateway, "dbutils", FakeDbutils(), raising=False)
+    monkeypatch.setenv("INFERENCE_API_TOKEN", "env-token")
     config = make_config()
-    provider = gateway._DatabricksSecretsProvider()
+    result = gateway.make_gateway(config)
+    assert isinstance(result, gateway._RestGateway)
+    assert isinstance(result.secrets_provider, gateway._EnvSecretsProvider)
+    assert result.secrets_provider.get_token() == "env-token"
 
-    with pytest.raises(NameError, match="unrelated bug inside dbutils.secrets.get"):
-        provider.get_token(config)
+
+def test_env_secrets_provider_raises_when_token_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("INFERENCE_API_TOKEN", raising=False)
+    provider = gateway._EnvSecretsProvider()
+    with pytest.raises(RuntimeError, match="INFERENCE_API_TOKEN"):
+        provider.get_token()

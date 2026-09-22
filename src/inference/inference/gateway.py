@@ -1,3 +1,4 @@
+import os
 from typing import TYPE_CHECKING, Any, Protocol
 
 import requests
@@ -17,19 +18,17 @@ class SalesGateway(Protocol):
 
 
 class SecretsProvider(Protocol):
-    def get_token(self, config: Config) -> str: ...
+    def get_token(self) -> str: ...
 
 
-class _DatabricksSecretsProvider:
-    def get_token(self, config: Config) -> str:
-        try:
-            dbutils_module = dbutils  # pyright: ignore[reportUndefinedVariable]
-        except NameError as error:
-            raise RuntimeError("Real API mode requires Databricks Secrets.") from error
-        return dbutils_module.secrets.get(
-            scope=config.secret_scope,
-            key=config.secret_key.get_secret_value(),
-        )
+class _EnvSecretsProvider:
+    def get_token(self) -> str:
+        token = os.environ.get("INFERENCE_API_TOKEN")
+        if not token:
+            raise RuntimeError(
+                "INFERENCE_API_TOKEN is not set; the source API cannot be authenticated."
+            )
+        return token
 
 
 def make_gateway(
@@ -37,7 +36,7 @@ def make_gateway(
 ) -> SalesGateway:
     """Sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. The endpoint must supply at least 28 calendar days of history."""
     return _RestGateway(
-        create_http_session(), config, secrets_provider or _DatabricksSecretsProvider()
+        create_http_session(), config, secrets_provider or _EnvSecretsProvider()
     )
 
 
@@ -51,7 +50,7 @@ class _RestGateway:
 
     def _request_headers(self) -> dict:
         return {
-            "Authorization": f"Bearer {self.secrets_provider.get_token(self.config)}",
+            "Authorization": f"Bearer {self.secrets_provider.get_token()}",
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
