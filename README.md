@@ -25,12 +25,12 @@ Run `make` with no arguments to list all targets with descriptions.
 unit tests before every `git push`. Run it once after `uv sync`.
 
 
-## Deployment shape
+## Docs
 
-Training and daily inference are deployed as separate workloads with different execution
-profiles — this repo's images stay platform-neutral (the model directory is just a config field),
-but the intended target split, the reasoning behind it, and what to do if the chosen platform runs
-out of headroom are written up in `docs/architecture.md` and `docs/what_if.md`.
+- `docs/architecture.md` — what's actually built and running today (the container images, the
+  Compose stack, CI).
+- `docs/deployment.md` — the proposed AWS target this is built to run under (not deployed).
+- `docs/what_if.md` — escalation paths and their cost, if requirements change later.
 
 ## Origin
 
