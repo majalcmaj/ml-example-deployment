@@ -32,11 +32,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:3.14-slim-bookworm@sha256:82bc3c539b8813ada9d68c63b40158fa002f7f33de9bf3312a3dfdc0620dff56 AS runtime
 
-# xgboost's manylinux wheel links libgomp.so.1 but does not vendor it.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN useradd --create-home --uid 10001 app
 
 ENV MPLBACKEND=Agg \
