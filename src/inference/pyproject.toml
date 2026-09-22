@@ -3,7 +3,7 @@ name = "inference"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "common",
+    "forecasting",
     "infra",
     "pandas>=3.0.5",
     "pydantic>=2.13.5",
@@ -16,7 +16,7 @@ dependencies = [
 dev = ["testkit"]
 
 [tool.uv.sources]
-common = { workspace = true }
+forecasting = { workspace = true }
 infra = { workspace = true }
 testkit = { workspace = true }
 

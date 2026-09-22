@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from common.forecast_metadata import ForecastMetadata, ModelConfiguration
+from forecasting.metadata import ForecastMetadata, ModelConfiguration
 
 from inference.preprocess import payload_to_dataframe, preprocess_data
 

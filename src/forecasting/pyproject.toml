@@ -1,12 +1,22 @@
 [project]
-name = "common"
+name = "forecasting"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "infra",
     "joblib>=1.6.0",
+    "numpy",
     "pandas>=3.0.5",
     "pydantic>=2.13.5",
+    "xgboost>=3.4.1",
 ]
+
+[dependency-groups]
+dev = ["testkit"]
+
+[tool.uv.sources]
+infra = { workspace = true }
+testkit = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.12.0,<0.13.0"]

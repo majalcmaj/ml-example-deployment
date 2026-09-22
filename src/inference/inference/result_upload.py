@@ -10,7 +10,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from common.forecast_metadata import ForecastMetadata
+    from forecasting.metadata import ForecastMetadata
 
     from inference.gateway import SalesGateway
 

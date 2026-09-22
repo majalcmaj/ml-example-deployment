@@ -2,14 +2,27 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from infra.logger import get_logger
+from xgboost import XGBRegressor
 
-from inference.model_loader import load_model
+from forecasting.consts import MODEL_FILENAME
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import pandas as pd
-    from common.forecast_metadata import ModelConfiguration
+
+    from forecasting.metadata import ModelConfiguration
+
+
+def load_model(artifact_dir: Path) -> XGBRegressor:
+    model_path = artifact_dir / MODEL_FILENAME
+
+    if not model_path.exists():
+        raise FileNotFoundError(f"The trained model is missing from {artifact_dir}.")
+
+    model = XGBRegressor()
+    model.load_model(model_path)
+    return model
 
 
 def make_forecast(

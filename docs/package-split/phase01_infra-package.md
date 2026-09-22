@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=716c9d3; date=2026-09-22 -->
 # Phase 01 — infra-package
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — 716c9d3 (2026-09-22)
 
 Read `docs/package-split/prompt.md` first.
 

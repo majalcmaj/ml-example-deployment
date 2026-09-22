@@ -1,7 +1,7 @@
 import pandas as pd
 
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
-from common.features import create_time_features
+from forecasting.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from forecasting.features import create_time_features
 
 
 def test_is_weekend_flags_saturday_and_sunday() -> None:

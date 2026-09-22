@@ -9,7 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "common",
+    "forecasting",
     "inference",
     "infra",
     "ml-deployment",
@@ -371,23 +371,6 @@ wheels = [
 ]
 
 [[package]]
-name = "common"
-version = "0.1.0"
-source = { editable = "src/common" }
-dependencies = [
-    { name = "joblib" },
-    { name = "pandas" },
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "joblib", specifier = ">=1.6.0" },
-    { name = "pandas", specifier = ">=3.0.5" },
-    { name = "pydantic", specifier = ">=2.13.5" },
-]
-
-[[package]]
 name = "contourpy"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -539,6 +522,37 @@ wheels = [
 ]
 
 [[package]]
+name = "forecasting"
+version = "0.1.0"
+source = { editable = "src/forecasting" }
+dependencies = [
+    { name = "infra" },
+    { name = "joblib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pydantic" },
+    { name = "xgboost" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "testkit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "infra", editable = "src/infra" },
+    { name = "joblib", specifier = ">=1.6.0" },
+    { name = "numpy" },
+    { name = "pandas", specifier = ">=3.0.5" },
+    { name = "pydantic", specifier = ">=2.13.5" },
+    { name = "xgboost", specifier = ">=3.4.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "testkit", editable = "src/testkit" }]
+
+[[package]]
 name = "fqdn"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -598,7 +612,7 @@ name = "inference"
 version = "0.1.0"
 source = { editable = "src/inference" }
 dependencies = [
-    { name = "common" },
+    { name = "forecasting" },
     { name = "infra" },
     { name = "pandas" },
     { name = "pydantic" },
@@ -614,7 +628,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "common", editable = "src/common" },
+    { name = "forecasting", editable = "src/forecasting" },
     { name = "infra", editable = "src/infra" },
     { name = "pandas", specifier = ">=3.0.5" },
     { name = "pydantic", specifier = ">=2.13.5" },
@@ -1225,8 +1239,8 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "common" },
     { name = "debugpy" },
+    { name = "forecasting" },
     { name = "inference" },
     { name = "infra" },
     { name = "jupyter" },
@@ -1240,8 +1254,8 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "common", editable = "src/common" },
     { name = "debugpy", specifier = ">=1.8.21" },
+    { name = "forecasting", editable = "src/forecasting" },
     { name = "inference", editable = "src/inference" },
     { name = "infra", editable = "src/infra" },
     { name = "jupyter", specifier = ">=1.1.1" },
@@ -2215,7 +2229,7 @@ name = "training"
 version = "0.1.0"
 source = { editable = "src/training" }
 dependencies = [
-    { name = "common" },
+    { name = "forecasting" },
     { name = "infra" },
     { name = "joblib" },
     { name = "matplotlib" },
@@ -2231,7 +2245,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "common", editable = "src/common" },
+    { name = "forecasting", editable = "src/forecasting" },
     { name = "infra", editable = "src/infra" },
     { name = "joblib", specifier = ">=1.6.0" },
     { name = "matplotlib", specifier = ">=3.11.1" },

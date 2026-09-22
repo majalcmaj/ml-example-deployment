@@ -12,15 +12,15 @@ from typing import TYPE_CHECKING, cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from common.consts import (
+from forecasting.consts import (
     CATEGORY_COLUMN,
     DATE_COLUMN,
     METADATA_FILENAME,
     MODEL_FILENAME,
     TARGET_COLUMN,
 )
-from common.forecast_metadata import ForecastMetadata, ModelConfiguration
-from common.preprocessing import (
+from forecasting.metadata import ForecastMetadata, ModelConfiguration
+from forecasting.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
@@ -194,7 +194,7 @@ plt.show()
 # ## 7. Create time-series features
 # Add calendar fields plus category-specific lags and rolling averages. Every sales feature is shifted first, so it contains only information available before the forecast date.
 
-from common.features import create_time_features
+from forecasting.features import create_time_features
 
 featured_sales = create_time_features(daily_sales)
 history_features = [

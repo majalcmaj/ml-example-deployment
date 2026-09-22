@@ -1,6 +1,11 @@
 import pandas as pd
 
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, REQUIRED_COLUMNS, TARGET_COLUMN
+from forecasting.consts import (
+    CATEGORY_COLUMN,
+    DATE_COLUMN,
+    REQUIRED_COLUMNS,
+    TARGET_COLUMN,
+)
 
 
 def validate_required_columns_present(sales: pd.DataFrame) -> None:
