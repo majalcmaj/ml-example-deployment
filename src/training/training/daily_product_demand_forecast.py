@@ -68,6 +68,7 @@ raw_sales = load_training_data(CONFIG.data_dir)
 
 # ## 3. Inspect and validate the data
 # Review the data before changing it. The three configuration values below identify the date, product category, and quantity columns.
+# TODO: decide. Is this needed during the real training? I guess logging won't hurt, but maybe these metrics should be also sent to some metric aggregation service rather than just logged? Other metrics below - such as duplicate rows, counts of dates and categories, number of outliers, etc. should also be sent as metrics
 
 
 log.info(raw_sales.head())
@@ -104,7 +105,7 @@ log.info(f"Product categories: {sales[CATEGORY_COLUMN].nunique()}")
 
 # ## 5. Aggregate daily sales by category
 # Sum repeated rows for each day and product. Then create every date-product combination; when a product is absent on a day, interpret it as zero units sold.
-
+# TODO: compare this with the preprocessing in the inference flow. How much can be sensibly extracted to common/?
 daily_sales = (
     sales.groupby([DATE_COLUMN, CATEGORY_COLUMN], as_index=False)[TARGET_COLUMN]
     .sum()
