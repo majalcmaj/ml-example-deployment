@@ -1,251 +1,87 @@
-# Architecture
+# Architecture (current)
 
-This is the target AWS design the images in this repo (`docker/*.Dockerfile`, `docker-compose.yml`)
-are built to run under. **Only the local pieces are actually built**: the two container images
-and the Compose stack that wires them together for a laptop/CI smoke test. Everything to the right 
-of "CI builds and tags the inference image" below — the AWS services, the schedule, the read path — is proposed, not
-deployed;
-
-The CI half of that split is real, not a stub: `.github/workflows/ci-cd.yml` is a reusable
-workflow (lint → unit tests → e2e tests → `make test-compose`) called on every push/PR, so the gap
-is specifically build/deploy automation, not tests/lint — those already gate every change.
+What's actually built and running today: two container images and the Compose stack
+that wires them together for a laptop/CI smoke test. For the proposed AWS target this
+is built to run under, see `docs/deployment.md`. For what changes if requirements
+evolve, see `docs/what_if.md`.
 
 ## Repository layout
 
-<change>make this a mermaid diagram</change>
-
-```
-src/
-  infra/        config loader, logger, correlation-id context
-  forecasting/  domain kernel: consts, metadata contract, preprocessing, feature engineering, model load+predict
-  training/     trains the model, writes outputs/{model,metadata,predictions}
-  inference/    loads the model, calls the source/result HTTP endpoints, serves next-day forecasts
-  testkit/      e2e test helpers (script runner, tolerance asserts) — dev-only
-docker/         one Dockerfile per image (inference, training, mock-api) + the mock API's source
-deploy/         config/*.toml baked into each image at build time (absolute paths, no uv.lock at runtime)
-docker-compose.yml   local stack: mock-api -> training -> inference, wired together for an e2e run
-```
-
-Dependency direction: `training` and `inference` (deployable apps) both depend on `forecasting`,
-which depends on `infra`; `testkit` is a dev dependency of both apps. Neither `training` nor
-`inference` depends on the other.
-
-## Deployment
 ```mermaid
-flowchart LR
-    EB1[EventBridge<br/>daily schedule] --> TRAIN[Training job<br/>Fargate task / SageMaker<br/>Training Job<br/>training.Dockerfile]
-    S3RAW[(S3: raw sales)] --> TRAIN
-    TRAIN --> S3ART[(S3: versioned model<br/>+ metadata artifacts)]
-    S3ART --> CI[CI build:<br/>bake artifacts into<br/>inference image]
-    CODE[inference source] --> CI
-    CI --> ECR[(ECR: tagged<br/>inference image)]
-    EB2[EventBridge<br/>daily schedule] --> INF[Inference Lambda<br/>container image]
-    ECR --> INF
-    SALESAPI[[Sales API<br/>mock or real]] -->|GET recent sales| INF
-    INF -->|POST forecast| SALESAPI
-    INF --> S3PRED[(S3: recent sales log<br/>+ daily forecast)]
-    S3PRED --> CLIENT[External client]
-    TRAIN -.heartbeat metric.-> CW[CloudWatch alarm:<br/>missing heartbeat]
-    INF -.heartbeat metric.-> CW
+flowchart TD
+    infra["infra (lib)<br/>config loader, logger, correlation-id"]
+    forecasting["forecasting (lib)<br/>consts, metadata contract, feature<br/>engineering, model load + predict"]
+    training["training (app)<br/>trains model, writes outputs"]
+    inference["inference (app)<br/>loads model, calls sales API,<br/>writes forecast"]
+    testkit["testkit (dev-only)<br/>script runner, tolerance asserts"]
+
+    training --> forecasting --> infra
+    inference --> forecasting
+    testkit -.dev dep.-> training
+    testkit -.dev dep.-> inference
 ```
 
-## Two schedules, two compute shapes
+`training` and `inference` never depend on each other — the only link between them is
+the artifact files on disk. `docker/` holds one Dockerfile per image (inference,
+training, mock-api) plus the mock API's source; `deploy/config/*.toml` holds the config
+baked into each image at build time; `docker-compose.yml` wires mock-api → training →
+inference together for a local run.
 
-The split is by **workload**, not by platform:
+## Local pipeline
 
-- **Training** (`docker/training.Dockerfile`) → a Fargate task or a SageMaker Training Job, not
-  Lambda. Lambda's 15-minute execution cap and 10 GB image/`/tmp` ceiling are fine against today's
-  ~20k-row CSV but do not generalise, and Lambda has no GPU path if the model ever needs one.
-  Training reads raw sales from S3, writes a versioned model and
-  metadata back to S3 — the same two artifacts training already
-   already writes to locally.
-- **Daily inference batch** → a Lambda container image. The whole run is seconds of compute
-  against a 2.5 MB model; at once-a-day cadence every invocation is a cold start anyway, so
-  Lambda's cold-start tax buys nothing to optimize away, and the platform's low ceiling (same
-  15-minute/10 GB limits) is never in play at this size.
+`docker-compose.yml` runs `mock-api` → `training` → `inference`, handing artifacts off
+through a shared volume. Key commands (`make` with no arguments lists all of them):
 
-Both are the *same* container contract already proven by `docker-compose.yml` and
-`scripts/compose_smoke.sh`: `training` service writes into a shared volume, `inference` service
-reads it back. Swapping the image runner from "Docker Compose on a laptop" to "Fargate task" /
-"Lambda container image" changes the trigger and the artifact source, not the code inside the
-image.
+- `make images` — build all three images
+- `make compose-up` / `make compose-down` — run/tear down the local stack
+- `make compose-retrain` — rerun training alone without restarting the rest
+- `make test-compose` — run the full pipeline and diff the result against the inference
+  baseline (also a CI job)
+- `make baseline-inference` — regenerate that baseline after an intentional model change
 
-## Why Fargate/SageMaker + Lambda, not Databricks
+`make deploy-staging` / `deploy-prod` / `deploy-dev` exist as named stubs only — no
+deploy automation is implemented yet; that gap is what `docs/deployment.md` proposes
+closing.
 
-Databricks is the closest managed alternative to the whole pipeline above: native MLflow (tracking + registry), 
-Jobs run-status alerting (email/webhook on failure/success/duration threshold) with no
-separate metrics system to build, and a notebook-to-production story that would have matched this
-project's original Jupyter-notebook shape directly.
+## CI
 
-Declined for this design, not overlooked:
+`.github/workflows/ci-cd.yml` is a reusable workflow — lint → unit tests → e2e tests →
+`make test-compose` — run on every push/PR. This part is real, not a stub.
 
-- <add>I am more familiar with AWS services - time constraints did not allow me to deeply explore Databricks.</add>
-- <change>Drop the built and proven part. Focus on the local reproducibility and ability to pin dependencies</change> **The container-first path is already built and proven.** `docker/*.Dockerfile` and
-  `docker-compose.yml` run the real training→inference pipeline end to end today
-  (`scripts/compose_smoke.sh`, `make test-compose`). Databricks Jobs run on managed clusters against
-  a cluster spec, not arbitrary containers — Databricks Container Services only lets you customize
-  the cluster's *base image*, it doesn't take the plain `ENTRYPOINT` + config-file/env-var contract
-  these images already use. Adopting Databricks now would mean re-deriving the training/inference
-  split for its container model instead of reusing what already works — the same "not a free lunch"
-  bar `docs/what_if.md` #1 applies to SageMaker Processing/Training Jobs.
-- Lambda's per-invocation billing and Fargate's per-task-second billing — cheap at
-  this job's actual size (one ~20k-row CSV, seconds of inference compute, once a day), with no
-  workspace/cluster fleet to keep provisioned.
-- **What's given up by not going Databricks:** native MLflow registry — already a named,
-  declined-for-now upgrade in `docs/what_if.md` #4 for the same YAGNI reasoning — and Jobs
-  run-status alerting, which the CloudWatch heartbeat alarm below covers for the same "job silently
-  stopped" failure mode without needing a Databricks workspace to run it in.
+## Config and artifact baking
 
-Revisit if model retraining ever needs coordinating across multiple contributors, or if
-notebook-based experimentation becomes a real day-to-day workflow again — that's the workflow
-Databricks earns its keep on, not running a single scheduled batch job.
+Each member loads a frozen pydantic `Config` from `config.toml` at import time.
+`infra.config.load_config` overrides any field from an env var
+(`<PREFIX>_<FIELD_UPPER>`, e.g. `INFERENCE_ARTIFACT_DIR`) or swaps the whole config file
+via `<PREFIX>_CONFIG_FILE`. Relative `Path` fields resolve against the project root
+(found by walking up to `uv.lock`); a lean runtime image ships without `uv.lock`, so
+`deploy/config/*.toml` use absolute paths instead of relying on that fallback.
 
-## Model-loading strategy per platform
+The inference image copies the model and metadata into `/opt/model` as the last
+Dockerfile layer, so only a model change busts that layer's build cache.
 
-<Remove>NEVER reference TODO - it will be deleted</remove>
-(`docs/TODO.md:60`, "Model loading strategy per platform".) The image build already treats the
-model directory as a config value, not a hardcoded path: `inference/config.py:11` declares
-`artifact_dir: Path`, and both `forecasting/artifacts.py:9`
-(`verify_artifacts_present`) and `forecasting/model.py:17-18` (`load_model`) take it as a
-parameter rather than assuming a location. `infra/config.py:16-30`'s `load_config` overrides any
-config field from an env var (`<PREFIX>_<FIELD>`, e.g. `INFERENCE_ARTIFACT_DIR`), so "where the
-model lives" is already a one-env-var decision, not a code change.
+## Reproducibility
 
-Two strategies fall out of that one field:
+Training pins its random seed (`RANDOM_SEED = 42`, `src/training/training/main.py:49`,
+threaded into the XGBoost regressor as `random_state`), so rebuilding from the same
+commit is expected to reproduce the same model bytes. The image tag is still what gets
+rolled back, not the commit — rollback means redeploying a previous tag, which is
+simplest when the tag is treated as the unit of deployment regardless of how
+reproducible the build is.
 
-- **Baked into the image** (what `docker/inference.Dockerfile:36-40` does today: `COPY
-  ${MODEL_DIR}/xgb_daily_product_demand.json ${MODEL_DIR}/forecast_metadata.joblib /opt/model/` as
-  the deliberately-last layer, so only a model change busts that layer's cache). This is the
-  Lambda path: no startup fetch, no dependency on S3 being reachable or the training job having
-  finished before the schedule fires, and the image tag *is* the deployable unit — pull an older
-  tag, get an older model, with no separate "which model version is live" bookkeeping.
-- **Mounted or fetched at start** — point `artifact_dir` (`INFERENCE_ARTIFACT_DIR`) at a mounted
-  volume or have the entrypoint pull from S3 before `verify_artifacts_present` runs. Nothing in
-  `forecasting` needs to change; this is a deploy-time config choice, not a code fork. This is the
-  shape you reach for once baking stops making sense — see `docs/what_if.md` #3.
+## Forecast record store
 
-### Why baked, not fetched, for the default path
+`inference/record_store.py` defines a `ForecastRecordStore` protocol with one
+implementation today, `LocalForecastRecordStore`: it writes the forecast CSV and the
+source payload it was built from to `output_dir`. That's what `inference/main.py`'s
+`__main__` wires up.
 
-At daily cadence, cold starts are the normal case, not an edge case — there is no warm pool to
-keep hot for a once-a-day invocation. Baking means the image *is* self-contained: no network call
-on the critical path, no "S3 was slow/unreachable, fail the whole day's forecast" failure mode, and
-the container fails at `docker build` time (missing artifact) rather than at invocation time. The
-cost is releases coupling model and code together — accepted deliberately here because a daily
-batch job has no user-facing deploy-window pressure; see `docs/what_if.md` #3 for when that cost
-stops being acceptable.
+## Heartbeat metrics (as implemented)
 
-### Rollback
-
-Rollback is redeploying the previous image tag. Because the model is baked in, "roll back the
-model" and "roll back the code" are the same action — point the Lambda's container image at the
-prior ECR tag. There is no separate model-registry rollback to coordinate, which is the trade for
-accepting the coupling above. <add>mention/reference dvc/mlflow tagging once this stops scaling</add>
-
-### Caveat: image reproducibility is not model reproducibility
-
-<check>The seed is actuall set to 42. Double check this in the code</check>
-An image tag reproducibly gets you back the same *bytes* — the same JSON model dump, the same
-metadata file. It does not mean rebuilding from the same commit reproduces those bytes: training
-has no seed pinning yet, so two `make image-inference` runs off the same commit can bake in two different models. Treat the image
-tag as the unit of rollback (it pins exact bytes), not the git commit (it doesn't).
-
-## Predictions store and the low-latency read path
-
-<change>Reminder: NO TODO REFERENCES</change>
-Inference writes each day's forecast, plus the recent-sales window it pulled from the sales API,
-to S3 as JSON/CSV under a dated key — the same artifact already produced locally as
-`outputs/inference_next_day_forecast.csv` via `src/inference/inference/gateway.py`'s
-`upload_inference_results` (currently a POST to a sales API, mock or real), just added as a second
-sink. Persisting the recent-sales window alongside the forecast also covers `docs/TODO.md`'s
-"persist inference input data ... for future ground-truth join" item for free — it's the same S3
-write, not a separate mechanism.
-
-`docs/task.md:21` requires external clients to query predictions "at any time with low latency."
-A direct read of a well-known/dated S3 key clears that bar at the request volume this system
-actually has (a handful of clients, one new object a day): GET latency is tens of milliseconds,
-no compute sits on the read path, and there's no service to keep warm or pay for idly. Access is a
-public-read bucket policy, justified by the data being non-PII aggregate sales figures with no
-compliance/retention concern; a presigned-URL scheme is the fallback if
-public-read is rejected later, without anything upstream changing.
-
-The earlier open question of a latency SLA (`docs/TODO.md:65`) splits into two separate things
-once stated precisely, and both are already covered:
-
-- **Query latency** — how long a client's GET takes — is S3's own published object-retrieval
-  performance, not something this app's code affects or needs to instrument separately.
-- **Freshness** — how soon after the daily trigger the forecast is actually available to query —
-  is exactly `inference_duration_seconds`, the metric `MetricsCollector` already records on every
-  run (see Alerting, above). A CloudWatch alarm on that metric exceeding an agreed threshold (e.g.
-  "not ready within N minutes of the EventBridge trigger") *is* the SLA-breach alert, using the same
-  alarm mechanism as the heartbeat and drift checks — not a separate monitoring path to build.
-
-This deliberately does *not* give clients filtered/indexed/paginated queries, per-client auth, or
-protection against write concurrency — a DynamoDB table behind a read Lambda and API Gateway would,
-at the cost of a running query tier this system doesn't need at today's scale. See
-`docs/what_if.md` #2 for that escalation and its trigger.
-
-## Failure signal: heartbeat, not just bad values
-
-Both scheduled jobs already emit this without any AWS-specific code: `infra/metrics.py`'s
-`MetricsCollector` sends a metrics batch — always including `total_duration_seconds` and
-`correlation_id` — on every run via its `__exit__`, whether or not the run recorded anything else
-(`src/training/training/main.py:235`, `src/inference/inference/main.py:99`). In AWS, the
-`MetricsSink` behind it is a CloudWatch implementation instead of today's `LoggingMetricsSink`
-(same `send(metrics)` interface, no caller change), and a CloudWatch alarm fires on that
-`total_duration_seconds` metric going *missing* within the expected window — which is what catches
-a job that silently stopped firing at all. A bad prediction still emits this heartbeat and passes
-the check, but a job EventBridge never triggered, or that crashed before completion, does not.
-This is deliberately a liveness check, not a quality check — see below for
-where drift/quality monitoring sits alongside it.
-
-## Drift and data-quality monitoring
-
-Scope: there's no ground-truth/label feedback loop in this assignment, so
-monitoring is limited to data/feature drift, not model performance metrics — that would need
-predictions joined against actuals, which persisting the recent-sales window to S3 (above) sets up
-for later but doesn't provide today.
-
-## Alerting
-
-One mechanism serves both the heartbeat and the drift metrics above: a CloudWatch Alarm per metric
-(missing-data alarm on `total_duration_seconds` for the heartbeat, threshold alarms on
-`unknown_category_rows` / `outlier_bound_violation_rate` for drift), each wired to an SNS topic that
-fans out to email/Slack webhook subscribers. Nothing upstream of the alarm needs to know this exists
-— it's a CloudWatch resource watching whatever `MetricsSink` already sends, not a code path.
-
-## Secrets
-
-The sales API token is already read from the environment at call time
-In AWS the only change is where that env var's value comes from — Secrets Manager injected into
-the Lambda's environment at invoke time rather than a Compose-level literal — not the code that
-reads it.
-
-## Infrastructure as code
-
-Terraform, one parameterized root module rather than three separate
-configs — dev/staging/prod are the same resource shape, differing only in IAM/GH-Environment
-scoping. State backend: S3 with native locking GitHub's side stays a manual prerequisite, not
-Terraform-managed — this module is AWS-only.
-
-**Enforcing pipeline-only writes:** three deploy roles (dev/staging/prod), each trusted only via
-GitHub's OIDC provider. No IAM users, no long-lived AWS keys, ever created for a human. The two
-ECR repositories (training, inference) and the model-artifacts/predictions S3 buckets each carry a
-resource policy denying write actions to everything except that environment's deploy-role ARN —
-enforcement lives on the resource, not just on who happens to have console access.
-
-**Runtime execution roles** are separate from the deploy roles and scoped tighter still: a Fargate
-task role for training  and a Lambda execution role for inference. Neither can touch ECR, the other's bucket, or IAM itself.
-
-**Pipeline wiring:** Terraform creates the EventBridge daily-schedule rules and targets (Fargate
-task for training, Lambda for inference — the same two triggers in the diagram above), the ECS
-task definition, and the Lambda function. Model promotion is deliberately *not* fully automated 
-end to end: training producing a new model artifact doesn't by itself put it in front of clients. Building the new artifact into an
-inference image and pushing it to prod rides the same human-gated path code deploys already use —
-the `prod` GH Environment's manual `workflow_dispatch` + required reviewer. A person looks at the training run's validation metrics
-(`validation_mae`/`validation_rmse`/`validation_wmape_percent`, already recorded — see Alerting,
-above) and decides to trigger that promotion; there's no separate approval system to build, and no
-path for a model to reach production without going through it.
-
-**Read-only human role:** a separate IAM role for people — `ecr:Describe*`/`BatchGetImage`,
-`logs:Get*`, `cloudwatch:Describe*` — for viewing and debugging only. It cannot push an image,
-update the Lambda, or touch the ECS task definition; there is no role a human can assume that can.
+`MetricsCollector` (`infra/metrics.py`) records `total_duration_seconds` and
+`correlation_id` on every run via `__exit__`, whether or not anything else was
+recorded, plus per-run metrics like `inference_duration_seconds`, `forecast_rows`,
+`forecast_total_units`, `model_feature_count`, and `category_count`
+(`inference/main.py`; training records its own validation metrics equivalently). The
+sink behind it, `LoggingMetricsSink`, just logs the batch — nothing ships these
+metrics anywhere else yet. `docs/deployment.md` covers the proposed CloudWatch wiring.
