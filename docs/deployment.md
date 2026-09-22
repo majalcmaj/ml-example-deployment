@@ -40,8 +40,18 @@ The split is by workload, not by platform:
 
 Both are the *same* container contract already proven by the local Compose stack:
 training writes into a shared volume, inference reads it back. Swapping the runner from
-Compose to Fargate/Lambda changes the trigger and artifact source, not the code inside
-the image.
+Compose to Fargate/Lambda changes the trigger and artifact source, not the domain code
+inside the image.
+
+**Entrypoint caveat:** the images' current `ENTRYPOINT` (`python -m inference.main` /
+`python -m training.main`, plain scripts on a `python:3.14-slim-bookworm` base) runs
+unchanged as an ECS/Fargate task — Fargate just execs the container's entrypoint, same as
+Compose does today. Lambda is not a drop-in: a Lambda container image needs either an AWS
+base image (`public.ecr.aws/lambda/python`) with `CMD` pointing at a
+`handler(event, context)` function, or the Lambda Runtime Interface Client added to this
+image with the entrypoint changed to invoke it. Either way, inference's `run()` needs a
+thin handler wrapper — a small, mechanical Dockerfile/entrypoint change, not a rewrite of
+`forecasting`/`inference` logic, but a real change nonetheless, not "zero code change."
 
 ## Why Fargate/SageMaker + Lambda, not Databricks
 

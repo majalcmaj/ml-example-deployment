@@ -9,10 +9,13 @@ speculative options to leave permanently open.
 **Trigger:** the training or inference container starts bumping into Lambda's hard ceilings —
 more rows, a heavier model, or a preprocessing step that no longer finishes in minutes.
 
-**Move:** move the batch to an ECS/Fargate scheduled task. It runs the *same image*, the same
-entrypoint — no code change. Only the trigger (EventBridge target: Lambda → Fargate task) and
-where config comes from move; config already resolves from either a config file or an env var
-per field, so this is infrastructure-side, not application-side.
+**Move:** move the batch to an ECS/Fargate scheduled task. It runs the *same image* and domain
+code; only the trigger (EventBridge target: Lambda → Fargate task) and where config comes from
+move — config already resolves from either a config file or an env var per field, so that part
+is infrastructure-side, not application-side. The entrypoint itself simplifies back to the plain
+`python -m inference.main` script (Fargate execs a container entrypoint directly), dropping the
+Lambda handler wrapper described in `docs/deployment.md`'s entrypoint caveat — a small
+Dockerfile/entrypoint edit, not an application code change.
 
 **Cost:** a task launch is slower to start than a warm-ish Lambda invocation (irrelevant at daily
 cadence) and you now pay for a running task instead of Lambda's per-invocation billing — worth it
