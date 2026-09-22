@@ -44,4 +44,4 @@ COPY --chown=app:app ${MODEL_DIR}/xgb_daily_product_demand.json \
 
 USER app
 WORKDIR /var/forecast
-ENTRYPOINT ["python", "-m", "inference.daily_product_demand_inference"]
+ENTRYPOINT ["python", "-m", "inference.main"]

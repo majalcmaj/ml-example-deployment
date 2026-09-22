@@ -105,7 +105,8 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 ## Submission
 - [ ] Package repo link or ZIP
 - [ ] Attach diagram + brief architecture notes
-- [ ] Reference original notebooks' git commit in README so they stay discoverable
-- [ ] Delete the `.ipynb` notebooks from the working tree once the README references their git
+- [x] Reference original notebooks' git commit in README so they stay discoverable
+- [x] Delete the `.ipynb` notebooks from the working tree once the README references their git
   commit (item above) — they've drifted from the `.py` scripts and CLAUDE.md's "Known drift"
-  note about them should be removed in the same change
+  note about them should be removed in the same change. Entrypoint scripts renamed to `main.py`
+  in the same pass (`training/main.py`, `inference/main.py`).

@@ -6,7 +6,7 @@ from testkit.runner import run_script
 
 MEMBER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = MEMBER_ROOT.parents[1]
-SCRIPT_PATH = MEMBER_ROOT / "training" / "daily_product_demand_forecast.py"
+SCRIPT_PATH = MEMBER_ROOT / "training" / "main.py"
 
 
 @pytest.fixture(scope="session")

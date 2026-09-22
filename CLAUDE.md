@@ -14,8 +14,8 @@ Daily product-demand forecasting (one global XGBoost model over coffee-shop sale
   contract (`ForecastMetadata`), preprocessing helpers, feature engineering (`create_time_features`,
   `build_future_features`, `encode_for_model`), model load + predict (`load_model`,
   `make_forecast`), and artifact-presence checks (`verify_artifacts_present`). Depends on `infra`.
-- `training` (app) — `training/daily_product_demand_forecast.py`: cleans CSVs, trains, writes `outputs/{next_day_product_forecast.csv, xgb_daily_product_demand.json, forecast_metadata.joblib}`
-- `inference` (app) — `inference/daily_product_demand_inference.py`: loads those artifacts, rebuilds
+- `training` (app) — `training/main.py`: cleans CSVs, trains, writes `outputs/{next_day_product_forecast.csv, xgb_daily_product_demand.json, forecast_metadata.joblib}`
+- `inference` (app) — `inference/main.py`: loads those artifacts, rebuilds
   features from recent sales, and hits HTTP endpoints via `gateway.py` (a `SalesGateway` protocol
   backed by `_RestGateway` + `_EnvSecretsProvider`, which reads `INFERENCE_API_TOKEN`) using
   `http_session.py`, writing `outputs/inference_next_day_forecast.csv`. There is no simulation
@@ -33,11 +33,11 @@ Run `make` with no arguments to list all targets with descriptions (descriptions
 target lines in `Makefile` as `## ...` comments — keep them updated when adding targets).
 
 ```
-uv run ruff check      # lint (ruff config in root pyproject; *.ipynb excluded)
+uv run ruff check      # lint (ruff config in root pyproject)
 uv run pytest src/forecasting/forecasting/features_test.py::test_is_weekend_flags_saturday_and_sunday   # single test
 ```
 
-Run scripts directly from repo root: `uv run python3 src/training/training/daily_product_demand_forecast.py`
+Run scripts directly from repo root: `uv run python3 src/training/training/main.py`
 (training must run before inference — inference fails fast if `outputs/` lacks model + metadata).
 
 Container workflow (see `docker/` below): `make images` (or `image-inference` / `image-training` /
@@ -72,7 +72,7 @@ that mechanism intact when touching config.
     runs the script under `uv run python3` in a tmp cwd, with `TRAINING_DATA_DIR`/`TRAINING_OUTPUT_DIR`
     env overrides redirecting it into that tmp dir.
   - `inference`'s e2e (`src/inference/tests/conftest.py`) is in-process: it imports `run()` from
-    `daily_product_demand_inference.py` and calls it directly with a `Config` built **in the fixture**
+    `main.py` and calls it directly with a `Config` built **in the fixture**
     (`Config.model_validate({...})`, not env vars) and an injected `StubSalesGateway`
     (`src/inference/tests/stub_gateway.py`), which reads `data/` off disk instead of hitting HTTP.
     `Config` is *not* driven through env overrides here because `CONFIG` is an import-time
@@ -97,15 +97,13 @@ that mechanism intact when touching config.
 
 ## Known drift / gotchas
 
-- The `.py` scripts started as `nbconvert` exports of the `.ipynb` next to them, but have since
-  diverged: `daily_product_demand_inference.py` was split into `gateway.py`, `preprocess.py`,
-  `result_upload.py`, `config.py`, and `http_session.py` (its pure-compute modules — `features.py`,
-  `forecaster.py`/`model_loader.py`, `artifacts.py` — have since moved into `forecasting` as
-  `features.py`, `model.py`, and `artifacts.py`) and no longer carries `# In[n]:` cell markers, and
-  the training script has drifted the same way. Tests run the **scripts**; the notebooks still
-  exist but show stale logic (e.g. inline secret lookup, dict-style artifact access) — treat them
-  as historical reference only, not current design. Do not edit the notebooks. They're slated for
-  eventual removal from the repo (tracked in `docs/TODO.md`); once gone, this note goes with them.
+- The scripts were originally `nbconvert` exports of Jupyter notebooks; the notebooks have since
+  been removed from the working tree (see the README for the git commit they're still recoverable
+  from). `inference/main.py` was split out of the original inference notebook export into
+  `gateway.py`, `preprocess.py`, `result_upload.py`, `config.py`, and `http_session.py` (its
+  pure-compute modules — `features.py`, `forecaster.py`/`model_loader.py`, `artifacts.py` — have
+  since moved into `forecasting` as `features.py`, `model.py`, and `artifacts.py`); the training
+  script has drifted the same way.
 - `make baseline-inference` runs the training script at repo root, copies model + metadata into
   inference's baseline dir, then runs `make test-inference`.
 - `outputs/` is gitignored; `data/coffeeshop_daily_sales_report.csv` is the only input and is committed.

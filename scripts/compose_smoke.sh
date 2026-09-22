@@ -16,7 +16,7 @@ trap 'docker compose down -v --remove-orphans' EXIT
 # baked-in copy at /opt/model -- the baked model is a build-time placeholder, never what actually
 # gets used.
 if [[ ! -f outputs/xgb_daily_product_demand.json ]]; then
-    uv run python3 src/training/training/daily_product_demand_forecast.py
+    uv run python3 src/training/training/main.py
 fi
 
 rm -f outputs/inference_next_day_forecast.csv

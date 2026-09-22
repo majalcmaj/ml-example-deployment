@@ -50,7 +50,7 @@ The split is by **workload**, not by platform:
   ~20k-row CSV but do not generalise, and Lambda has no GPU path if the model ever needs one.
   Training reads raw sales from S3, writes a versioned model (`xgb_daily_product_demand.json`) and
   metadata (`forecast_metadata.joblib`) back to S3 — the same two artifacts
-  `training/daily_product_demand_forecast.py` already writes to `outputs/` locally.
+  `training/main.py` already writes to `outputs/` locally.
 - **Daily inference batch** → a Lambda container image. The whole run is seconds of compute
   against a 2.5 MB model; at once-a-day cadence every invocation is a cold start anyway, so
   Lambda's cold-start tax buys nothing to optimize away, and the platform's low ceiling (same

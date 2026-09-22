@@ -46,3 +46,10 @@ Training and daily inference are deployed as separate workloads with different e
 profiles — this repo's images stay platform-neutral (the model directory is just a config field),
 but the intended target split, the reasoning behind it, and what to do if the chosen platform runs
 out of headroom are written up in `docs/architecture.md` and `docs/what_if.md`.
+
+## Origin
+
+`training/main.py` and `inference/main.py` started as `nbconvert` exports of two Jupyter
+notebooks (`daily_product_demand_forecast.ipynb`, `daily_product_demand_inference.ipynb`). The
+notebooks have since diverged from the refactored scripts and were removed from the working tree;
+their last state is preserved at commit `3594a0b`.

@@ -10,7 +10,7 @@ speculative options to leave permanently open.
 more rows, a heavier model, or a preprocessing step that no longer finishes in minutes.
 
 **Move:** move the batch to an ECS/Fargate scheduled task. It runs the *same image*, the same
-entrypoint (`ENTRYPOINT ["python", "-m", "inference.daily_product_demand_inference"]` in
+entrypoint (`ENTRYPOINT ["python", "-m", "inference.main"]` in
 `docker/inference.Dockerfile:44`, or training's equivalent) — no code change. Only the trigger
 (EventBridge target: Lambda → Fargate task) and where config comes from move; `infra/config.py:16-30`
 already resolves config from either a config file or an env var per field, so this is

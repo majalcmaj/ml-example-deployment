@@ -50,4 +50,4 @@ RUN mkdir -p /var/forecast/outputs && chown app:app /var/forecast/outputs
 WORKDIR /var/forecast
 USER app
 
-ENTRYPOINT ["python", "-m", "training.daily_product_demand_forecast"]
+ENTRYPOINT ["python", "-m", "training.main"]

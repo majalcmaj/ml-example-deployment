@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from forecasting.consts import METADATA_FILENAME, MODEL_FILENAME
 from inference.config import Config
-from inference.daily_product_demand_inference import run
+from inference.main import run
 from stub_gateway import StubSalesGateway
 
 MEMBER_ROOT = Path(__file__).resolve().parents[1]

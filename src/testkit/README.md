@@ -18,9 +18,9 @@ make test-training        # training only
 
 | script | writes | compared against |
 |---|---|---|
-| `src/training/training/daily_product_demand_forecast.py` | `next_day_product_forecast.csv` | `src/training/tests/baseline/next_day_product_forecast.csv` |
-| `src/training/training/daily_product_demand_forecast.py` | `forecast_metadata.joblib` | `src/training/tests/baseline/forecast_metadata.joblib` |
-| `src/inference/inference/daily_product_demand_inference.py` | `inference_next_day_forecast.csv` | `src/inference/tests/baseline/inference_next_day_forecast.csv` |
+| `src/training/training/main.py` | `next_day_product_forecast.csv` | `src/training/tests/baseline/next_day_product_forecast.csv` |
+| `src/training/training/main.py` | `forecast_metadata.joblib` | `src/training/tests/baseline/forecast_metadata.joblib` |
+| `src/inference/inference/main.py` | `inference_next_day_forecast.csv` | `src/inference/tests/baseline/inference_next_day_forecast.csv` |
 
 `xgb_daily_product_demand.json` (the native XGBoost model dump) is **not** diffed directly — it's
 a serialization of the fitted model, not a stable contract; `forecast_metadata.joblib`'s

@@ -34,7 +34,7 @@ test-mutation:  ## Prove e2e suites catch regressions (scripts/mutation_check.sh
 
 .PHONY: image-inference
 image-inference:  ## Build the inference image (trains first if outputs/ has no model)
-	@test -f outputs/xgb_daily_product_demand.json || uv run python3 src/training/training/daily_product_demand_forecast.py
+	@test -f outputs/xgb_daily_product_demand.json || uv run python3 src/training/training/main.py
 	docker build -f docker/inference.Dockerfile -t fc-inference .
 
 .PHONY: image-training
@@ -98,14 +98,14 @@ build:  ## uv build --all-packages
 # outputs/inference_next_day_forecast.csv over src/inference/tests/baseline/inference_next_day_forecast.csv.
 .PHONY: baseline-inference
 baseline-inference:  ## Regenerate inference baseline model + metadata from fresh training run, then test-inference
-	uv run python3 src/training/training/daily_product_demand_forecast.py
+	uv run python3 src/training/training/main.py
 	cp outputs/xgb_daily_product_demand.json outputs/forecast_metadata.joblib src/inference/tests/baseline/
 	$(MAKE) test-inference
 
 # TODO: remove
 .PHONY: code-duplication-check
 code-duplication-check:  ## AST similarity between training and inference scripts
-	uv run scripts/ast_similarity.py src/inference/inference/daily_product_demand_inference.py src/training/training/daily_product_demand_forecast.py
+	uv run scripts/ast_similarity.py src/inference/inference/main.py src/training/training/main.py
 
 # Deploy stages are stubs: no infra exists yet (no Dockerfile/k8s/deploy scripts), these just
 # stand in for the real thing so the CD pipeline shape (gates, environments) is wired up now.

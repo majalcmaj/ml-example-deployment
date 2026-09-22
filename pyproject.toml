@@ -15,7 +15,6 @@ dev = [
     "testkit",
     "ruff>=0.15.17",
     "debugpy>=1.8.21",
-    "jupyter>=1.1.1",
     "pyright>=1.1.414",
 ]
 
@@ -32,15 +31,12 @@ inference = { workspace = true }
 training = { workspace = true }
 testkit = { workspace = true }
 
-[tool.ruff]
-extend-exclude = ["*.ipynb"]
-
 [tool.ruff.lint]
 extend-select = ["B", "C4", "RET", "SIM", "UP", "ANN", "PTH", "ARG", "TCH"]
 
 [tool.pyright]
 include = ["src"]
-exclude = ["**/*.ipynb", "**/outputs"]
+exclude = ["**/outputs"]
 extraPaths = ["src/inference/tests"]
 pythonVersion = "3.14"
 typeCheckingMode = "basic"
