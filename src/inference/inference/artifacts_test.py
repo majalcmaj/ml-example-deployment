@@ -1,12 +1,9 @@
 from typing import TYPE_CHECKING
 
 import pytest
+from common.consts import METADATA_FILENAME, MODEL_FILENAME
 
-from inference.daily_product_demand_inference import (
-    METADATA_FILENAME,
-    verify_artifacts_present,
-)
-from inference.model_loader import MODEL_FILENAME
+from inference.artifacts import verify_artifacts_present
 
 if TYPE_CHECKING:
     from pathlib import Path

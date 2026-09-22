@@ -12,7 +12,13 @@ from typing import cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from common.consts import (
+    CATEGORY_COLUMN,
+    DATE_COLUMN,
+    METADATA_FILENAME,
+    MODEL_FILENAME,
+    TARGET_COLUMN,
+)
 from common.forecast_metadata import ForecastMetadata, ModelConfiguration
 from common.logger import get_logger
 from common.preprocessing import (
@@ -352,8 +358,8 @@ OUTPUT_DIR = CONFIG.output_dir
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 prediction_path = OUTPUT_DIR / "next_day_product_forecast.csv"
-model_path = OUTPUT_DIR / "xgb_daily_product_demand.json"
-metadata_path = OUTPUT_DIR / "forecast_metadata.joblib"
+model_path = OUTPUT_DIR / MODEL_FILENAME
+metadata_path = OUTPUT_DIR / METADATA_FILENAME
 
 next_day_forecast.to_csv(prediction_path, index=False)
 model.save_model(model_path)

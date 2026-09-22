@@ -1,13 +1,14 @@
 from typing import TYPE_CHECKING, cast
 
+from common.consts import METADATA_FILENAME
 from common.context import init_context
 from common.forecast_metadata import ForecastMetadata
 
 from common import logger
+from inference.artifacts import verify_artifacts_present
 from inference.config import CONFIG
 from inference.features import build_future_features, encode_for_model
 from inference.forecaster import make_forecast
-from inference.model_loader import MODEL_FILENAME
 from inference.preprocess import payload_to_dataframe, preprocess_data
 from inference.result_upload import upload_inference_results
 
@@ -15,37 +16,14 @@ init_context()
 from inference.gateway import SalesGateway, make_gateway
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     import pandas as pd
 
     from inference.config import Config
-
-METADATA_FILENAME = "forecast_metadata.joblib"
 
 
 def _obtain_recent_sales(sales_gateway: SalesGateway) -> pd.DataFrame:
     source_payload = sales_gateway.fetch_source_payload()
     return payload_to_dataframe(source_payload)
-
-
-def verify_artifacts_present(artifact_dir: Path) -> None:
-    """Fail fast on missing model/metadata artifacts, before any network call or
-    feature reconstruction runs."""
-    if not artifact_dir.exists():
-        raise FileNotFoundError(
-            "Could not find outputs/. Run training or deploy the model artifacts first."
-        )
-
-    missing = [
-        filename
-        for filename in (METADATA_FILENAME, MODEL_FILENAME)
-        if not (artifact_dir / filename).exists()
-    ]
-    if missing:
-        raise FileNotFoundError(
-            f"Missing required artifact(s) in {artifact_dir}: {', '.join(missing)}."
-        )
 
 
 def main(

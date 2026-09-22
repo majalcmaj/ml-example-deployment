@@ -2,3 +2,6 @@ DATE_COLUMN = "Date"
 CATEGORY_COLUMN = "Menu"
 TARGET_COLUMN = "Total_Qty"
 REQUIRED_COLUMNS = {DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN}
+
+MODEL_FILENAME = "xgb_daily_product_demand.json"
+METADATA_FILENAME = "forecast_metadata.joblib"

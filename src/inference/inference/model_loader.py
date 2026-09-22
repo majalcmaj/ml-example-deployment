@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING
 
+from common.consts import MODEL_FILENAME
 from xgboost import XGBRegressor
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-MODEL_FILENAME = "xgb_daily_product_demand.json"
 
 
 def load_model(artifact_dir: Path) -> XGBRegressor:
