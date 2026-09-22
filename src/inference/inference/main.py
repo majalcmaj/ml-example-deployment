@@ -15,6 +15,7 @@ from infra import logger
 
 init_context()
 from inference.gateway import RestGateway, SalesGateway
+from inference.record_store import ForecastRecordStore, LocalForecastRecordStore
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -52,6 +53,7 @@ def _record_metadata_metrics(
 def main(
     config: Config,
     sales_gateway: SalesGateway,
+    record_store: ForecastRecordStore,
     metadata: ForecastMetadata,
     metrics: MetricsCollector,
 ) -> None:
@@ -72,12 +74,19 @@ def main(
 
     upload_inference_results(sales_gateway, forecast_date, forecast, metadata)
 
-    forecast[[metadata.configuration.category_column, PREDICTED_QTY_COLUMN]].to_csv(
-        config.output_dir / "inference_next_day_forecast.csv", index=False
+    record_store.store(
+        forecast_date.date(),
+        forecast[[metadata.configuration.category_column, PREDICTED_QTY_COLUMN]],
+        source_payload,
     )
 
 
-def run(config: Config, sales_gateway: SalesGateway, metrics: MetricsCollector) -> None:
+def run(
+    config: Config,
+    sales_gateway: SalesGateway,
+    record_store: ForecastRecordStore,
+    metrics: MetricsCollector,
+) -> None:
     log = logger.get_logger(__name__)
     log.info("Running inference with config: %s", config.model_dump_json(indent=2))
 
@@ -92,9 +101,9 @@ def run(config: Config, sales_gateway: SalesGateway, metrics: MetricsCollector) 
     )
     _record_metadata_metrics(metrics, metadata)
 
-    main(config, sales_gateway, metadata, metrics)
+    main(config, sales_gateway, record_store, metadata, metrics)
 
 
 if __name__ == "__main__":
     with MetricsCollector(LoggingMetricsSink()) as metrics:
-        run(CONFIG, RestGateway(CONFIG), metrics)
+        run(CONFIG, RestGateway(CONFIG), LocalForecastRecordStore(CONFIG.output_dir), metrics)

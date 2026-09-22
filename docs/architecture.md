@@ -1,22 +1,18 @@
 # Architecture
 
-Solution design for `docs/task.md:16-24` (deliverable 2): predictions computed once a day,
-queryable by external clients at low latency, running autonomously. See `docs/what_if.md` for
-what changes as load, model size, or query patterns outgrow this shape.
-
 This is the target AWS design the images in this repo (`docker/*.Dockerfile`, `docker-compose.yml`)
-are built to run under. **Only the local pieces are actually built**: the three container images
-and the Compose stack that wires them together for a laptop/CI smoke test
-(`scripts/compose_smoke.sh`, `make test-compose`). Everything to the right of "CI builds and tags
-the inference image" below — the AWS services, the schedule, the read path — is proposed, not
-deployed; `Makefile:109-119` stubs `deploy-staging`/`deploy-prod`/`deploy-dev` on purpose, so the
-CD pipeline shape exists without pretending real infra is behind it yet.
+are built to run under. **Only the local pieces are actually built**: the two container images
+and the Compose stack that wires them together for a laptop/CI smoke test. Everything to the right 
+of "CI builds and tags the inference image" below — the AWS services, the schedule, the read path — is proposed, not
+deployed;
 
 The CI half of that split is real, not a stub: `.github/workflows/ci-cd.yml` is a reusable
 workflow (lint → unit tests → e2e tests → `make test-compose`) called on every push/PR, so the gap
 is specifically build/deploy automation, not tests/lint — those already gate every change.
 
 ## Repository layout
+
+<change>make this a mermaid diagram</change>
 
 ```
 src/
@@ -34,8 +30,7 @@ Dependency direction: `training` and `inference` (deployable apps) both depend o
 which depends on `infra`; `testkit` is a dev dependency of both apps. Neither `training` nor
 `inference` depends on the other.
 
-## Diagram
-
+## Deployment
 ```mermaid
 flowchart LR
     EB1[EventBridge<br/>daily schedule] --> TRAIN[Training job<br/>Fargate task / SageMaker<br/>Training Job<br/>training.Dockerfile]
@@ -61,9 +56,9 @@ The split is by **workload**, not by platform:
 - **Training** (`docker/training.Dockerfile`) → a Fargate task or a SageMaker Training Job, not
   Lambda. Lambda's 15-minute execution cap and 10 GB image/`/tmp` ceiling are fine against today's
   ~20k-row CSV but do not generalise, and Lambda has no GPU path if the model ever needs one.
-  Training reads raw sales from S3, writes a versioned model (`xgb_daily_product_demand.json`) and
-  metadata (`forecast_metadata.joblib`) back to S3 — the same two artifacts
-  `training/main.py` already writes to `outputs/` locally.
+  Training reads raw sales from S3, writes a versioned model and
+  metadata back to S3 — the same two artifacts training already
+   already writes to locally.
 - **Daily inference batch** → a Lambda container image. The whole run is seconds of compute
   against a 2.5 MB model; at once-a-day cadence every invocation is a cold start anyway, so
   Lambda's cold-start tax buys nothing to optimize away, and the platform's low ceiling (same
@@ -77,14 +72,15 @@ image.
 
 ## Why Fargate/SageMaker + Lambda, not Databricks
 
-Databricks is the closest managed alternative to the whole pipeline above: native MLflow (tracking
-+ registry), Jobs run-status alerting (email/webhook on failure/success/duration threshold) with no
+Databricks is the closest managed alternative to the whole pipeline above: native MLflow (tracking + registry), 
+Jobs run-status alerting (email/webhook on failure/success/duration threshold) with no
 separate metrics system to build, and a notebook-to-production story that would have matched this
 project's original Jupyter-notebook shape directly.
 
 Declined for this design, not overlooked:
 
-- **The container-first path is already built and proven.** `docker/*.Dockerfile` and
+- <add>I am more familiar with AWS services - time constraints did not allow me to deeply explore Databricks.</add>
+- <change>Drop the built and proven part. Focus on the local reproducibility and ability to pin dependencies</change> **The container-first path is already built and proven.** `docker/*.Dockerfile` and
   `docker-compose.yml` run the real training→inference pipeline end to end today
   (`scripts/compose_smoke.sh`, `make test-compose`). Databricks Jobs run on managed clusters against
   a cluster spec, not arbitrary containers — Databricks Container Services only lets you customize
@@ -92,8 +88,7 @@ Declined for this design, not overlooked:
   these images already use. Adopting Databricks now would mean re-deriving the training/inference
   split for its container model instead of reusing what already works — the same "not a free lunch"
   bar `docs/what_if.md` #1 applies to SageMaker Processing/Training Jobs.
-- **Cost and operational shape.** Databricks bills for cluster runtime (sized clusters, even for a
-  short job) vs. Lambda's per-invocation billing and Fargate's per-task-second billing — cheaper at
+- Lambda's per-invocation billing and Fargate's per-task-second billing — cheap at
   this job's actual size (one ~20k-row CSV, seconds of inference compute, once a day), with no
   workspace/cluster fleet to keep provisioned.
 - **What's given up by not going Databricks:** native MLflow registry — already a named,
@@ -107,6 +102,7 @@ Databricks earns its keep on, not running a single scheduled batch job.
 
 ## Model-loading strategy per platform
 
+<Remove>NEVER reference TODO - it will be deleted</remove>
 (`docs/TODO.md:60`, "Model loading strategy per platform".) The image build already treats the
 model directory as a config value, not a hardcoded path: `inference/config.py:11` declares
 `artifact_dir: Path`, and both `forecasting/artifacts.py:9`
@@ -140,22 +136,22 @@ stops being acceptable.
 
 ### Rollback
 
-(`docs/TODO.md:67`, "Rollback mechanism if newly deployed model performs badly".) Rollback is
-redeploying the previous image tag. Because the model is baked in, "roll back the
+Rollback is redeploying the previous image tag. Because the model is baked in, "roll back the
 model" and "roll back the code" are the same action — point the Lambda's container image at the
 prior ECR tag. There is no separate model-registry rollback to coordinate, which is the trade for
-accepting the coupling above.
+accepting the coupling above. <add>mention/reference dvc/mlflow tagging once this stops scaling</add>
 
 ### Caveat: image reproducibility is not model reproducibility
 
+<check>The seed is actuall set to 42. Double check this in the code</check>
 An image tag reproducibly gets you back the same *bytes* — the same JSON model dump, the same
 metadata file. It does not mean rebuilding from the same commit reproduces those bytes: training
-has no seed pinning yet (`docs/TODO.md:51`, "Seed pinning for training reproducibility"), so two
-`make image-inference` runs off the same commit can bake in two different models. Treat the image
+has no seed pinning yet, so two `make image-inference` runs off the same commit can bake in two different models. Treat the image
 tag as the unit of rollback (it pins exact bytes), not the git commit (it doesn't).
 
 ## Predictions store and the low-latency read path
 
+<change>Reminder: NO TODO REFERENCES</change>
 Inference writes each day's forecast, plus the recent-sales window it pulled from the sales API,
 to S3 as JSON/CSV under a dated key — the same artifact already produced locally as
 `outputs/inference_next_day_forecast.csv` via `src/inference/inference/gateway.py`'s
@@ -209,35 +205,6 @@ monitoring is limited to data/feature drift, not model performance metrics — t
 predictions joined against actuals, which persisting the recent-sales window to S3 (above) sets up
 for later but doesn't provide today.
 
-This reuses the same metrics seam as the heartbeat above, not a new subsystem — drift signals are
-just more values recorded on the same `MetricsCollector` and sent through the same `MetricsSink`:
-
-- **Categorical drift.** `src/inference/inference/preprocess.py` filters incoming rows to
-  `metadata.categories`; a sales row for a category the model wasn't trained on is dropped and
-  logged (`log.warning` with the drop count) rather than silently discarded. Wiring that count
-  into `MetricsCollector` (`metrics.record("unknown_category_rows", ...)`) instead of just logging
-  it would let it alert via the same CloudWatch-alarm mechanism as the heartbeat — not a new
-  alerting path — once the metrics seam is threaded through `preprocess_data`.
-- **Numeric/distribution drift.** Training already computes per-category outlier bounds
-  (`ForecastMetadata.outlier_bounds`, IQR quartiles used to mask outliers before fit). Comparing
-  each day's incoming sales against those same bounds at inference time and recording the violation
-  rate reuses a number training already produces instead of inventing a second drift statistic.
-- **Missing/fabricated history.** Still open, and harder than it looks: `docs/TODO.md` frames the
-  28-day check as only bounding the pooled min/max date span, not per-category contiguity, so a
-  category closed for several days mid-window still passes and gets zero-filled by
-  `aggregate_per_category` instead of raised. The naive fix (flag a category whose row count is
-  below the window's day count) was tried and reverted — real sales data has categories that
-  legitimately sell zero units on many days, and a raw sales-event feed has no row at all for a
-  zero-sale day, so that heuristic flags almost every category as "gapped." Telling an actual
-  reporting outage apart from ordinary sparse sales needs a signal this feed doesn't carry (e.g. an
-  assortment/availability feed, or a minimum-support threshold tuned against real drop patterns).
-
-**Declined: automatic retraining on detected drift**, in favor of monitoring plus a human decision
-— an unattended pipeline that retrains itself off a drift
-signal it can't tell apart from a genuine, permanent shift (a product line actually discontinued)
-risks quietly baking a real business change into "corrected" data, or masking an upstream sales-API
-bug as noise. These metrics feed a human here, not a retrain trigger.
-
 ## Alerting
 
 One mechanism serves both the heartbeat and the drift metrics above: a CloudWatch Alarm per metric
@@ -246,106 +213,35 @@ One mechanism serves both the heartbeat and the drift metrics above: a CloudWatc
 fans out to email/Slack webhook subscribers. Nothing upstream of the alarm needs to know this exists
 — it's a CloudWatch resource watching whatever `MetricsSink` already sends, not a code path.
 
-**Databricks Jobs run-status alerting** — moot rather than declined: it's a property of running the
-job *on* Databricks Jobs, and `docs/architecture.md`'s "Why Fargate/SageMaker + Lambda, not
-Databricks" section already declined that platform for reasons unrelated to alerting (container
-contract mismatch, cost/operational shape). Naming it here for completeness: had Databricks been
-chosen, Jobs' built-in run-status alerting would have covered the heartbeat case without a
-CloudWatch alarm — one more thing given up alongside native MLflow in that earlier decision, not an
-independent tradeoff.
-
-**Considered, declined: self-hosted Prometheus.** Prometheus's model is pull-based scraping of a
-long-lived `/metrics` endpoint — a poor fit for Lambda/Fargate scheduled batch jobs that run for
-seconds once a day and then don't exist to be scraped. Making it work would mean routing through a
-Prometheus Pushgateway (or an OTel collector) as a translation shim, standing up and operating a
-Prometheus server (storage, retention, HA) to receive metrics CloudWatch already accepts natively
-via push (`PutMetricData`) with no extra infrastructure. Not worth it at this scale, and not a
-service this design's already-declined managed-platform reasoning (Databricks, SageMaker Registry)
-would suddenly favor self-hosting over.
-
-**Compatible, optional: Grafana as a dashboard layer.** This isn't an either/or with CloudWatch —
-Grafana's CloudWatch data source can query the same alarms/metrics for a more customizable dashboard
-than the CloudWatch console, without replacing CloudWatch Alarms as the thing that actually pages
-someone. Worth adding if the CloudWatch console's dashboards stop being enough; not needed to make
-alerting work.
-
-## Feature store
-
-A feature store (SageMaker Feature Store, managed; [Feast](https://feast.dev), open-source) solves
-a specific set of problems, none of which this project currently has:
-
-- **Train/serve skew** — training and inference computing features differently and quietly
-  disagreeing. Already solved here without one: `forecasting` is the single shared implementation
-  both `training` and `inference` call (`forecasting.features.build_future_features`/
-  `encode_for_model`, `forecasting.model.make_forecast`), not two independent copies a feature
-  store would otherwise be reconciling.
-- **Low-latency online feature retrieval** for serving a model on the request path. Doesn't apply
-  to a once-a-day batch job — there's no "fetch this entity's latest features in under 10ms" case
-  to serve. This only becomes relevant alongside `docs/what_if.md` #5 (per-request predictions), if
-  that's ever taken.
-- **Feature reuse and discovery across multiple models or teams.** There's one model, one owner,
-  and one feature set — nothing to reuse *from* or discover.
-- **Point-in-time-correct historical feature values** for building training sets that don't leak
-  future information. Training rebuilds features fresh from the raw CSV each run rather than
-  joining against a historical feature log, so this doesn't apply yet either.
-
-The `forecasting` library already is the thing a feature store would otherwise need to exist to
-prevent — a second, drifted copy of feature logic. Revisit if a second model gets added that wants
-to share features with this one, or if per-request serving (`docs/what_if.md` #5) makes online
-retrieval latency an actual requirement; neither is true today.
-
 ## Secrets
 
 The sales API token is already read from the environment at call time
-(`src/inference/inference/gateway.py`'s `_EnvSecretsProvider`, backed by `INFERENCE_API_TOKEN`;
-Compose exercises the same mechanism with a literal `local-dev-token` in `docker-compose.yml:29`).
 In AWS the only change is where that env var's value comes from — Secrets Manager injected into
 the Lambda's environment at invoke time rather than a Compose-level literal — not the code that
 reads it.
 
 ## Infrastructure as code
 
-Terraform, one parameterized root module (an `environment` variable) rather than three separate
+Terraform, one parameterized root module rather than three separate
 configs — dev/staging/prod are the same resource shape, differing only in IAM/GH-Environment
-scoping. State backend: S3 with native locking (`use_lockfile`, Terraform ~>1.10), no DynamoDB
-table needed. GitHub's side (the `dev`/`staging`/`prod` Environments and their branch/reviewer
-restrictions, already assumed by `test.yml`/`deploy-main.yml`) stays a manual prerequisite, not
+scoping. State backend: S3 with native locking GitHub's side stays a manual prerequisite, not
 Terraform-managed — this module is AWS-only.
 
-**The one manual exception:** a tiny `bootstrap` config (the state bucket, and the GitHub OIDC
-provider — an account-wide singleton) is applied once by hand, before any pipeline exists to apply
-anything else. Everything downstream of it goes through CI.
-
 **Enforcing pipeline-only writes:** three deploy roles (dev/staging/prod), each trusted only via
-GitHub's OIDC provider with a `sub` condition scoped to that GH Environment —
-
-```
-"Condition": {"StringEquals": {
-  "token.actions.githubusercontent.com:sub":
-    "repo:majalcmaj/ml-example-deployment:environment:prod"
-}}
-```
-
-— so only a workflow run through that specific environment (already gated on branch/reviewers in
-GH Settings) can assume it. No IAM users, no long-lived AWS keys, ever created for a human. The two
+GitHub's OIDC provider. No IAM users, no long-lived AWS keys, ever created for a human. The two
 ECR repositories (training, inference) and the model-artifacts/predictions S3 buckets each carry a
 resource policy denying write actions to everything except that environment's deploy-role ARN —
 enforcement lives on the resource, not just on who happens to have console access.
 
 **Runtime execution roles** are separate from the deploy roles and scoped tighter still: a Fargate
-task role for training (read raw-sales S3, write model-artifacts S3, `cloudwatch:PutMetricData`,
-its own log group) and a Lambda execution role for inference (write the predictions S3 bucket,
-`secretsmanager:GetSecretValue` for `INFERENCE_API_TOKEN`, `cloudwatch:PutMetricData`, its own log
-group). Neither can touch ECR, the other's bucket, or IAM itself.
+task role for training  and a Lambda execution role for inference. Neither can touch ECR, the other's bucket, or IAM itself.
 
 **Pipeline wiring:** Terraform creates the EventBridge daily-schedule rules and targets (Fargate
 task for training, Lambda for inference — the same two triggers in the diagram above), the ECS
-task definition, and the Lambda function (`package_type = "Image"`, `image_uri` from the ECR
-repo). Model promotion is deliberately *not* fully automated end to end: training producing a new
-model artifact doesn't by itself put it in front of clients. Building the new artifact into an
+task definition, and the Lambda function. Model promotion is deliberately *not* fully automated 
+end to end: training producing a new model artifact doesn't by itself put it in front of clients. Building the new artifact into an
 inference image and pushing it to prod rides the same human-gated path code deploys already use —
-the `prod` GH Environment's manual `workflow_dispatch` + required reviewer, per
-`deploy-main.yml`'s existing comment. A person looks at the training run's validation metrics
+the `prod` GH Environment's manual `workflow_dispatch` + required reviewer. A person looks at the training run's validation metrics
 (`validation_mae`/`validation_rmse`/`validation_wmape_percent`, already recorded — see Alerting,
 above) and decides to trigger that promotion; there's no separate approval system to build, and no
 path for a model to reach production without going through it.
