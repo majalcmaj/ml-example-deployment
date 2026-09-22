@@ -24,7 +24,7 @@
 
 **Feature extraction**
 - Wants single shared implementation between training and inference; only introduce a strategy pattern if real divergence appears (not speculative) — confirmed YAGNI approach
-- No formal feature store — deliberate skip given project scale, shared `common` module covers the need; not an oversight
+- No formal feature store — deliberate skip given project scale, shared `forecasting` library covers the need; not an oversight
 
 **Notebooks → production code**
 - Eliminating Jupyter notebooks entirely from production (prints → logging, markdown → well-structured code)
@@ -32,8 +32,13 @@
 - Open question: separating genuinely one-off exploration from diagnostic output that should run/log every training run
 
 **Project structure**
-- UV project with `training`, `inference`, `common` (shared feature extraction/data logic) modules
-- Still deciding whether data/model concerns need their own top-level module
+- UV workspace in a libs/apps shape: `training` and `inference` are deployable apps; `forecasting`
+  (shared feature extraction/data logic, the metadata contract, model load+predict) and `infra`
+  (config/logging/correlation-context) are libraries neither app depends on the other through.
+- Resolved: yes, data/model concerns wanted their own top-level module — that's `forecasting`. It's
+  kept separate from `infra` so the domain kernel depends on nothing but pandas/xgboost/pydantic
+  plus a logger, rather than recreating a `common`-style junk drawer under a new name (the
+  `package-split` plan).
 
 **Data & model versioning**
 - Rejected DVC (too much setup/learning curve for the timeline)

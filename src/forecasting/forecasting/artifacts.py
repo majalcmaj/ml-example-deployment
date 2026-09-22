@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from common.consts import METADATA_FILENAME, MODEL_FILENAME
+from forecasting.consts import METADATA_FILENAME, MODEL_FILENAME
 
 if TYPE_CHECKING:
     from pathlib import Path

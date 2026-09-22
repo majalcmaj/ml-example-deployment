@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from common.config import load_config
+from infra.config import load_config
 from pydantic import BaseModel, ConfigDict
 
 

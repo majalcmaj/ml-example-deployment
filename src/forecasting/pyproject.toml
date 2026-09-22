@@ -1,15 +1,13 @@
 [project]
-name = "training"
+name = "forecasting"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "forecasting",
     "infra",
-    "matplotlib>=3.11.1",
+    "joblib>=1.6.0",
     "numpy",
     "pandas>=3.0.5",
     "pydantic>=2.13.5",
-    "scikit-learn>=1.9.0",
     "xgboost>=3.4.1",
 ]
 
@@ -17,7 +15,6 @@ dependencies = [
 dev = ["testkit"]
 
 [tool.uv.sources]
-forecasting = { workspace = true }
 infra = { workspace = true }
 testkit = { workspace = true }
 

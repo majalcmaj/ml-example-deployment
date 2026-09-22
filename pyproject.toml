@@ -8,7 +8,8 @@ dependencies = []
 
 [dependency-groups]
 dev = [
-    "common",
+    "forecasting",
+    "infra",
     "inference",
     "training",
     "testkit",
@@ -25,7 +26,8 @@ package = false
 members = ["src/*"]
 
 [tool.uv.sources]
-common = { workspace = true }
+forecasting = { workspace = true }
+infra = { workspace = true }
 inference = { workspace = true }
 training = { workspace = true }
 testkit = { workspace = true }

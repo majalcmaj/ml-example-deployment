@@ -2,10 +2,10 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import pandas as pd
 import requests
-from common.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
+from forecasting.consts import CATEGORY_COLUMN, DATE_COLUMN, TARGET_COLUMN
 
-from common import logger
 from inference.http_session import create_http_session
+from infra import logger
 
 if TYPE_CHECKING:
     from inference.config import Config

@@ -1,16 +1,16 @@
 from typing import TYPE_CHECKING, cast
 
-from common.consts import METADATA_FILENAME
-from common.context import init_context
-from common.forecast_metadata import ForecastMetadata
+from forecasting.artifacts import verify_artifacts_present
+from forecasting.consts import METADATA_FILENAME
+from forecasting.features import build_future_features, encode_for_model
+from forecasting.metadata import ForecastMetadata
+from forecasting.model import make_forecast
+from infra.context import init_context
 
-from common import logger
-from inference.artifacts import verify_artifacts_present
 from inference.config import CONFIG
-from inference.features import build_future_features, encode_for_model
-from inference.forecaster import make_forecast
 from inference.preprocess import payload_to_dataframe, preprocess_data
 from inference.result_upload import upload_inference_results
+from infra import logger
 
 init_context()
 from inference.gateway import SalesGateway, make_gateway

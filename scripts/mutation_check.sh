@@ -9,13 +9,13 @@ cd "$(git rev-parse --show-toplevel)"
 # | # | Mutation                                                    | Suite that must fail          |
 # |---|--------------------------------------------------------------|--------------------------------|
 # | 1 | features.py: lag 28 -> 29                                   | full suite (training+inference e2e) |
-# | 2 | features.py: Is_Weekend [5, 6] -> [4, 6]                    | full suite (common/features_test.py) |
+# | 2 | features.py: Is_Weekend [5, 6] -> [4, 6]                    | full suite (forecasting/features_test.py) |
 # | 3 | training baseline csv: first prediction += 10               | src/training (PREDICTION_ATOL) |
 # | 4 | inference baseline csv: first prediction += 10              | src/inference                 |
 # | 5 | inference forecast_metadata.joblib renamed away             | src/inference (fail-fast)     |
 # | 6 | inference config.toml: artifact_dir -> "nowhere"            | inference config_test.py      |
 
-FEATURES="src/common/common/features.py"
+FEATURES="src/forecasting/forecasting/features.py"
 TRAINING_BASELINE="src/training/tests/baseline/next_day_product_forecast.csv"
 INFERENCE_BASELINE="src/inference/tests/baseline/inference_next_day_forecast.csv"
 INFERENCE_METADATA="src/inference/tests/baseline/forecast_metadata.joblib"

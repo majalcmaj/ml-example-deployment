@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
 import pytest
-from common.consts import METADATA_FILENAME, MODEL_FILENAME
 
-from inference.artifacts import verify_artifacts_present
+from forecasting.artifacts import verify_artifacts_present
+from forecasting.consts import METADATA_FILENAME, MODEL_FILENAME
 
 if TYPE_CHECKING:
     from pathlib import Path

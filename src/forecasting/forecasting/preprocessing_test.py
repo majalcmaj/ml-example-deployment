@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from common.preprocessing import (
+from forecasting.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,

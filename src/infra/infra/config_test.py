@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from common.config import find_project_root, load_config
+from infra.config import find_project_root, load_config
 
 if TYPE_CHECKING:
     import pytest
