@@ -3,6 +3,7 @@
 Split out of scripts/compose_smoke.sh so the check is real, lintable/typed Python
 rather than an inline `python3 -c "..."` block in bash.
 """
+# TODO: this should be a proper pytest test, using testcontainers.
 
 import pandas as pd
 from forecasting.consts import PREDICTED_QTY_COLUMN
