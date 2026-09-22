@@ -16,6 +16,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Fail-fast model loading (no fallback, no crash-loop)
 - [ ] Secret → vault abstraction (move off plain TOML field; base config refactor already done per git log)
 - [ ] 28-consecutive-calendar-day history check: fix/verify off-by-one (currently checks day 27, not 28) + clear error if API returns fewer days than required
+- [ ] 28-day history check only bounds the pooled min/max date span (`preprocess.py`), not per-category contiguity — a category closed for several days mid-window still passes and gets zero-filled by `aggregate_per_category` instead of raised. Frame this as a data-drift / distribution guardrail (detect and reject fabricated zero-history), not a quick fix to the existing check.
 - [ ] Documentation: Improve readme, add runbooks (e.g. what happens when regression tests break - whether to accept change or investigate), add arch diagram
 
 **P1**
@@ -39,6 +40,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file)
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
 - [ ] Persist inference input data keyed by request ID (for future ground-truth join)
+- [ ] `_SimulatedGateway.fetch_source_payload` globs every CSV in `data_dir` with no de-dup guard — latent today (one bundled CSV), but a second overlapping CSV would silently double-count sales
 
 **P2 — open questions**
 - [ ] Local/offline inference mode vs folding entirely into Compose stubs — keep or drop?

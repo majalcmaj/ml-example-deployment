@@ -69,6 +69,10 @@ def preprocess_data(
         )
     latest_date = cast("pd.Timestamp", daily_sales[model_config.date_column].max())
     first_required_date = latest_date - pd.Timedelta(days=27)
+    # TODO: this only bounds the pooled min/max date span, not per-category contiguity —
+    # a category closed for several days mid-window still passes here and gets zero-filled
+    # by aggregate_per_category() below instead of raised. See docs/TODO.md (data-drift
+    # guardrails) for the tracked follow-up.
     if daily_sales[model_config.date_column].min() > first_required_date:
         raise ValueError(
             "At least 28 consecutive calendar days of history are required for inference."

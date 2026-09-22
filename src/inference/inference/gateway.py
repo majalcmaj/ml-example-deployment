@@ -105,6 +105,9 @@ class _SimulatedGateway:
                 "Simulation mode requires the bundled data directory."
             )
 
+        # TODO: no de-dup guard — globs every CSV in data_dir, so overlapping/duplicate
+        # bundled CSVs would silently double-count sales. Latent today (one bundled CSV).
+        # See docs/TODO.md.
         source_frames = [
             pd.read_csv(path) for path in sorted(data_directory.glob("*.csv"))
         ]
