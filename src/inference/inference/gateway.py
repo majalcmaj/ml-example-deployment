@@ -37,10 +37,11 @@ class _EnvSecretsProvider:
         return token
 
 
+# TODO: This wrapper is not needed anymore. Move default arg to the construcor of the class, make it public and use directly
 def make_gateway(
     config: Config, secrets_provider: SecretsProvider | None = None
 ) -> SalesGateway:
-    """Sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. The endpoint must supply at least 28 calendar days of history."""
+    """Sends an authenticated GET request and expects either a JSON list or an object containing `records` or `data`. The endpoint must supply at least 28 calendar days of history."""  # move to class
     return _RestGateway(
         create_http_session(), config, secrets_provider or _EnvSecretsProvider()
     )

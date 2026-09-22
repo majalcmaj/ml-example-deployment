@@ -28,26 +28,21 @@ if TYPE_CHECKING:
     from training.config import Config
 
 RANDOM_SEED = 42
-VALIDATION_DAYS = 30
-
-pd.set_option("display.max_rows", 100)
-pd.set_option("display.max_columns", 50)
+VALIDATION_DAYS = 30  # TODO: move to configuration
 
 
+# TODO: split it further - it should have clearly named train/fit/whatever + validate functions that it just calls
 def run(config: Config) -> None:
+
     log = get_logger(__name__)
 
     raw_sales = load_training_data(config.data_dir)
-    log.info(raw_sales.head())
-    log.info("Shape: %s", raw_sales.shape)
-    log.info("Columns: %s", raw_sales.columns.tolist())
-    log.info(raw_sales.dtypes.rename("dtype").to_frame())
-    log.info(raw_sales.isna().sum().rename("missing_values").to_frame())
-    log.info("Exact duplicate rows: %s", raw_sales.duplicated().sum())
-    log.info(raw_sales.describe(include="all").transpose())
 
     sales = clean_sales(raw_sales)
-    log.info(f"Removed {len(raw_sales) - len(sales):,} exact duplicate or invalid rows.")
+    # TODO: see my comment in data_loading. Move the logs into the functions, compact them and split - important stuff to info level, less important to debug.
+    log.info(
+        f"Removed {len(raw_sales) - len(sales):,} exact duplicate or invalid rows."
+    )
     log.info(
         f"Clean date range: {sales[DATE_COLUMN].min().date()} to {sales[DATE_COLUMN].max().date()}"
     )
@@ -60,6 +55,7 @@ def run(config: Config) -> None:
     )
     log.info(daily_sales.head())
 
+    # TODO: I also want this moved to some utility functions - do not mix abstraction levels, as per clean code guidelines.
     validation_start = daily_sales[DATE_COLUMN].max() - pd.Timedelta(
         days=VALIDATION_DAYS - 1
     )
@@ -72,13 +68,18 @@ def run(config: Config) -> None:
     log.info(category_quartiles.head())
 
     featured_sales = create_time_features(daily_sales)
+    # TODO: Ditto - mixing abstraction levels
     history_features = [
         column
         for column in featured_sales.columns
         if column.startswith(("Lag_", "Rolling_"))
     ]
-    featured_sales = featured_sales.dropna(subset=history_features).reset_index(drop=True)
-    log.info(f"Rows available after 28 days of feature history: {len(featured_sales):,}")
+    featured_sales = featured_sales.dropna(subset=history_features).reset_index(
+        drop=True
+    )
+    log.info(
+        f"Rows available after 28 days of feature history: {len(featured_sales):,}"
+    )
     log.info(featured_sales.head())
 
     feature_columns = [
@@ -96,6 +97,7 @@ def run(config: Config) -> None:
     X_train, X_validation = encode_train_validation(
         train_data, validation_data, feature_columns, CATEGORY_COLUMN
     )
+    # TODO: is there a way to avoid casting here? Maybe make train_data a pydantic model? or at least namedtuple?
     y_train = cast("pd.Series", train_data[TARGET_COLUMN])
     y_validation = cast("pd.Series", validation_data[TARGET_COLUMN])
     log.info(
@@ -109,8 +111,14 @@ def run(config: Config) -> None:
     model = fit_model(X_train, y_train, X_validation, y_validation, RANDOM_SEED)
     log.info("Model training complete.")
 
+    # TODO: Why do we pass constatnts as arguments? Can we use them directly?
     overall_metrics, category_metrics = evaluate_predictions(
-        validation_data, X_validation, model, DATE_COLUMN, CATEGORY_COLUMN, TARGET_COLUMN
+        validation_data,
+        X_validation,
+        model,
+        DATE_COLUMN,
+        CATEGORY_COLUMN,
+        TARGET_COLUMN,
     )
     log.info(overall_metrics.to_frame())
     log.info(category_metrics)
@@ -124,7 +132,9 @@ def run(config: Config) -> None:
         raw_feature_columns=feature_columns,
         categories=all_categories,
         category_dummy_columns=[
-            column for column in X_train.columns if column.startswith(f"{CATEGORY_COLUMN}_")
+            column
+            for column in X_train.columns
+            if column.startswith(f"{CATEGORY_COLUMN}_")
         ],
         configuration=ModelConfiguration(
             date_column=DATE_COLUMN,
@@ -141,7 +151,9 @@ def run(config: Config) -> None:
     latest_date = cast("pd.Timestamp", daily_sales[DATE_COLUMN].max())
     future_features = build_future_features(latest_date, metadata, daily_sales)
     X_future = encode_for_model(future_features, metadata)
-    forecast = make_forecast(output_dir, future_features, X_future, metadata.configuration)
+    forecast = make_forecast(
+        output_dir, future_features, X_future, metadata.configuration
+    )
     forecast.to_csv(output_dir / "next_day_product_forecast.csv", index=False)
 
     log.info("Saved predictions, model, and metadata to: %s", output_dir)

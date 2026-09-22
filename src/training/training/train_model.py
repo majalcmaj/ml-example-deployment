@@ -13,6 +13,7 @@ def fit_model(
     y_validation: pd.Series,
     random_seed: int,
 ) -> XGBRegressor:
+    # TODO: Help decide - should the hyperparameters here be controlled with toml config or is it overkill?
     model = XGBRegressor(
         objective="count:poisson",
         n_estimators=400,
