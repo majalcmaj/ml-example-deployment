@@ -1,5 +1,7 @@
 # Deployment Proposal — Working Notes
 
+# NOTE: architecture.md takes precedence over this one.
+
 ## Overall direction
 - Primary recommendation: **AWS**, using **SageMaker** for model registry/versioning, not Databricks — chosen because it's the platform he knows best and can defend confidently in a follow-up conversation.
 - **MLflow** (open source client) is kept regardless of host for experiment tracking — the tracking API is identical whether pointed at a local file store or a hosted server, since Databricks' MLflow is the same open source project under a managed tracking server.
