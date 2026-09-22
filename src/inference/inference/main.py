@@ -76,7 +76,10 @@ def main(
 
     record_store.store(
         forecast_date.date(),
-        forecast[[metadata.configuration.category_column, PREDICTED_QTY_COLUMN]],
+        cast(
+            "pd.DataFrame",
+            forecast[[metadata.configuration.category_column, PREDICTED_QTY_COLUMN]],
+        ),
         source_payload,
     )
 
