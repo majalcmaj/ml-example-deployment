@@ -8,7 +8,7 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 - [x] Move hardcoded constants into TOML config
 - [x] Structured logging (timestamp, log level, correlation/run ID) replacing printf-based logging
 - [x] Regression tests
-- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks
+- [ ] Single shared feature extraction implementation (training + inference) — confirmed concrete duplication: `create_time_features` + category-alignment logic is copy-pasted between the two current notebooks. Concretely: `training/daily_product_demand_forecast.py`'s "Predict incoming-day sales" block (placeholder row + `create_time_features` + `get_dummies`/`reindex`) duplicates `inference/features.py`'s `build_future_features()`/`encode_for_model()` almost line for line (training additionally carries `Lower_Bound`/`Upper_Bound`/`Is_Outlier` columns inference doesn't need). Extract the shared parts into `common`.
 - [ ] Unit tests: feature extraction correctness
 - [x] Integration tests: model output shape/columns against prepared data
 - [ ] End-to-end tests: full pipeline against Docker Compose mocks

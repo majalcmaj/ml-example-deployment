@@ -5,7 +5,7 @@ from common.forecast_metadata import ForecastMetadata
 
 from common import logger
 from inference.config import CONFIG
-from inference.features import reconstruct_training_features
+from inference.features import build_future_features, encode_for_model
 from inference.forecaster import make_forecast
 from inference.model_loader import MODEL_FILENAME
 from inference.preprocess import payload_to_dataframe, preprocess_data
@@ -57,8 +57,10 @@ def main(
         "pd.Timestamp", daily_sales[metadata.configuration.date_column].max()
     )
 
-    forecast_date, future_features, X_future = reconstruct_training_features(
-        latest_date, metadata, daily_sales
+    future_features = build_future_features(latest_date, metadata, daily_sales)
+    X_future = encode_for_model(future_features, metadata)
+    forecast_date = cast(
+        "pd.Timestamp", future_features[metadata.configuration.date_column].max()
     )
 
     forecast = make_forecast(

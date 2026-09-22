@@ -308,6 +308,11 @@ plt.show()
 # ## 11. Predict incoming-day sales by category
 # Append one placeholder row per product for the day after the latest observed date. Feature creation reads the real history through the prior day; the placeholder target itself is never used because all demand features are shifted. Predictions are rounded to whole units.
 
+# TODO: this placeholder-row + create_time_features block and the get_dummies + reindex block
+# below are near-duplicated in inference/features.py's build_future_features()/encode_for_model()
+# (minus the outlier columns, which inference doesn't carry). Share one implementation between
+# training and inference. Tracked in docs/TODO.md ("Single shared feature extraction
+# implementation").
 forecast_date = daily_sales[DATE_COLUMN].max() + pd.Timedelta(days=1)
 future_rows = pd.DataFrame(
     {
