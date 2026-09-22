@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: lint
+        name: lint (ruff check + pyright)
+        entry: make lint
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: test-unit
+        name: unit tests
+        entry: make test-unit
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

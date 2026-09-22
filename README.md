@@ -25,6 +25,11 @@ which depends on `infra`; `testkit` is a dev dependency of both apps. Neither `t
 
 Run `make` with no arguments to list all targets with descriptions.
 
+## Git hooks
+
+`make install-hooks` sets up a pre-push hook (via `pre-commit`) that runs lint, type-check, and
+unit tests before every `git push`. Run it once after `uv sync`.
+
 ## Deploying a subset
 
 Each member installs independently, without the other members' dependencies — see

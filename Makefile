@@ -8,6 +8,10 @@ help:  ## Show this help
 sync:  ## uv sync — full workspace + dev tools
 	uv sync
 
+.PHONY: install-hooks
+install-hooks:  ## Install git pre-push hook (lint + type-check + unit tests)
+	uv run pre-commit install --hook-type pre-push
+
 .PHONY: test
 test:  ## Full test suite (testpaths = src)
 	uv run pytest
