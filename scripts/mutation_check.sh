@@ -15,6 +15,7 @@ cd "$(git rev-parse --show-toplevel)"
 # | 5 | inference forecast_metadata.joblib renamed away             | src/inference (fail-fast)     |
 # | 6 | inference config.toml: artifact_dir -> "nowhere"            | inference config_test.py      |
 # | 7 | result_upload.py: predicted_quantity int(...) -> int(...)+1 | src/inference (upload payload) |
+# | 8 | mock-api server.py: clamp GET history to 10 days            | make test-compose (28-day guard) |
 
 FEATURES="src/forecasting/forecasting/features.py"
 TRAINING_BASELINE="src/training/tests/baseline/next_day_product_forecast.csv"
@@ -22,8 +23,9 @@ INFERENCE_BASELINE="src/inference/tests/baseline/inference_next_day_forecast.csv
 INFERENCE_METADATA="src/inference/tests/baseline/forecast_metadata.joblib"
 INFERENCE_CONFIG="src/inference/inference/config.toml"
 RESULT_UPLOAD="src/inference/inference/result_upload.py"
+MOCK_API_SERVER="docker/mock-api/server.py"
 
-MUTATED_FILES=("$FEATURES" "$TRAINING_BASELINE" "$INFERENCE_BASELINE" "$INFERENCE_METADATA" "$INFERENCE_CONFIG" "$RESULT_UPLOAD")
+MUTATED_FILES=("$FEATURES" "$TRAINING_BASELINE" "$INFERENCE_BASELINE" "$INFERENCE_METADATA" "$INFERENCE_CONFIG" "$RESULT_UPLOAD" "$MOCK_API_SERVER")
 
 if [[ -n "$(git status --porcelain -- "${MUTATED_FILES[@]}")" ]]; then
     echo "ABORT: uncommitted changes in files this script mutates -- commit or stash first." >&2
@@ -91,6 +93,16 @@ mutate 6 "$INFERENCE_CONFIG" \
 mutate 7 "$RESULT_UPLOAD" \
     "sed -i 's/predicted_quantity=int(cast(\"int\", row\[\"Predicted_Qty\"\]))/predicted_quantity=int(cast(\"int\", row[\"Predicted_Qty\"])) + 1/' $RESULT_UPLOAD" \
     "src/inference -m e2e"
+
+sed -i 's/history_days = int(query.get("history_days", \["28"\])\[0\])/history_days = min(10, int(query.get("history_days", ["28"])[0]))/' "$MOCK_API_SERVER"
+
+if make test-compose >/tmp/mutation_check_8.log 2>&1; then
+    echo "FAIL mutation 8 survived ($MOCK_API_SERVER, target: make test-compose)"
+    SURVIVORS=$((SURVIVORS + 1))
+else
+    echo "PASS mutation 8 caught"
+fi
+git checkout -- "$MOCK_API_SERVER"
 
 if [[ "$SURVIVORS" -gt 0 ]]; then
     echo "$SURVIVORS mutation(s) survived" >&2

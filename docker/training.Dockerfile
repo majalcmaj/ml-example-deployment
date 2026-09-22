@@ -37,7 +37,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd --create-home --shell /usr/sbin/nologin app
+RUN useradd --create-home --uid 10001 app
 
 ENV MPLBACKEND=Agg \
     TRAINING_CONFIG_FILE=/etc/forecast/training.toml \
@@ -45,6 +45,13 @@ ENV MPLBACKEND=Agg \
 
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY deploy/config/training.toml /etc/forecast/training.toml
+
+# Docker seeds a named volume's initial content and ownership from whichever container mounts it
+# first. Compose's `model-artifacts` volume is shared with the inference image at a different
+# path (/opt/model) and a different uid, so this image's own non-root uid must match inference's
+# (10001) -- otherwise whichever container wins the race to populate the volume locks the other
+# out of it.
+RUN mkdir -p /var/forecast/outputs && chown app:app /var/forecast/outputs
 
 WORKDIR /var/forecast
 USER app

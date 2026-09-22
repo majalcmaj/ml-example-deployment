@@ -36,6 +36,16 @@ class Handler(BaseHTTPRequestHandler):
     def _authorized(self) -> bool:
         return self.headers.get("Authorization") == f"Bearer {TOKEN}"
 
+    def _log_request(self, status: int) -> None:
+        log.info(
+            "%s %s status=%d correlation_id=%s authorization=%s",
+            self.command,
+            self.path,
+            status,
+            self.headers.get("X-Correlation-ID", "-"),
+            "present" if self.headers.get("Authorization") else "absent",
+        )
+
     def _send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload).encode()
         self.send_response(status)
@@ -51,12 +61,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/recent-sales":
             if not self._authorized():
+                self._log_request(401)
                 self._send_json(401, {"error": "unauthorized"})
                 return
             query = parse_qs(urlparse(self.path).query)
             history_days = int(query.get("history_days", ["28"])[0])
             wanted_dates = set(sorted({row["Date"] for row in SALES}, reverse=True)[:history_days])
             records = [row for row in SALES if row["Date"] in wanted_dates]
+            self._log_request(200)
             self._send_json(200, {"records": records})
             return
         self._send_json(404, {"error": "not found"})
@@ -64,6 +76,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if urlparse(self.path).path == "/api/demand-forecast":
             if not self._authorized():
+                self._log_request(401)
                 self._send_json(401, {"error": "unauthorized"})
                 return
             length = int(self.headers.get("Content-Length", 0))
@@ -76,6 +89,7 @@ class Handler(BaseHTTPRequestHandler):
                 payload.get("generated_at_utc"),
                 len(predictions),
             )
+            self._log_request(200)
             self._send_json(200, {"status": "accepted", "received": len(predictions)})
             return
         self._send_json(404, {"error": "not found"})

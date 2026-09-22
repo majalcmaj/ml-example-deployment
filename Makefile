@@ -32,6 +32,34 @@ test-training:  ## Training package tests
 test-mutation:  ## Prove e2e suites catch regressions (scripts/mutation_check.sh)
 	./scripts/mutation_check.sh
 
+.PHONY: image-inference
+image-inference:  ## Build the inference image (trains first if outputs/ has no model)
+	@test -f outputs/xgb_daily_product_demand.json || uv run python3 src/training/training/daily_product_demand_forecast.py
+	docker build -f docker/inference.Dockerfile -t fc-inference .
+
+.PHONY: image-training
+image-training:  ## Build the training image
+	docker build -f docker/training.Dockerfile -t fc-training .
+
+.PHONY: image-mock-api
+image-mock-api:  ## Build the mock sales API image
+	docker build -f docker/mock-api.Dockerfile -t fc-mock-api .
+
+.PHONY: images
+images: image-inference image-training image-mock-api  ## Build all three images
+
+.PHONY: compose-up
+compose-up:  ## Run the local Compose stack (train -> serve -> infer -> upload)
+	docker compose up --build
+
+.PHONY: compose-down
+compose-down:  ## Tear down the local Compose stack and its volumes
+	docker compose down -v --remove-orphans
+
+.PHONY: test-compose
+test-compose:  ## Full pipeline against the Compose stack, diffed against the inference baseline
+	./scripts/compose_smoke.sh
+
 .PHONY: type-check
 type-check:  ## pyright over src (catches return-type mismatches ruff misses)
 	uv run pyright
