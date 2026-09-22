@@ -56,8 +56,14 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
   "wrong but within tolerance" of the stale baseline still passes; and it needs Docker, where a
   workspace-level pytest wouldn't. Keeping this item open for the baseline-free, Docker-free
   variant; `make test-compose` covers the CI-facing staleness risk in the meantime.
-- [ ] Categorical feature drift: alert on unknown/unseen category values
-- [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file)
+- [ ] Categorical feature drift: alert on unknown/unseen category values — design written up in
+  `docs/architecture.md` ("Drift and data-quality monitoring": count rows dropped by
+  `inference/preprocess.py:46`'s known-category filter via the existing `MetricsCollector`); not
+  yet wired up in code
+- [ ] Metrics/telemetry abstraction (real impl: CloudWatch/MLflow; local impl: stdout/file) —
+  `infra/metrics.py` (`MetricsSink`/`MetricsCollector`) ships the seam and the local impl
+  (`LoggingMetricsSink`), threaded through both `training` and `inference`; a CloudWatch
+  `MetricsSink` implementation is the still-open part
 - [ ] Extend HTTP retry to POST using request ID for server-side dedup (base retry+backoff already done per git log)
 - [ ] POST retry above is now testable end to end: `docker/mock-api/server.py` gives it a real
   local HTTP target (previously this needed hitting the real service to verify)
@@ -84,19 +90,33 @@ Prioritized task list, pulled from `planning.md`. P0 = required for submission, 
 ## Deliverable 2: Solution design doc
 
 **P0**
-- [ ] Architecture diagram (Mermaid/draw.io/PNG)
-- [ ] Databricks vs Lambda tradeoff write-up
+- [x] Architecture diagram (Mermaid/draw.io/PNG) — `docs/architecture.md`
+- [x] Databricks vs Lambda tradeoff write-up — `docs/architecture.md`'s "Why Fargate/SageMaker +
+  Lambda, not Databricks" section
 - [x] Model loading strategy per platform (MLflow registry vs baked-into-image) — written up in
   `docs/architecture.md` / `docs/what_if.md`
-- [ ] Drift/monitoring approach write-up
-- [ ] Alerting approach write-up (CloudWatch heartbeat / Databricks Jobs run-status)
+- [x] Drift/monitoring approach write-up — `docs/architecture.md`'s "Drift and data-quality
+  monitoring" section
+- [x] Alerting approach write-up (CloudWatch heartbeat / Databricks Jobs run-status) —
+  `docs/architecture.md`'s "Alerting" section: CloudWatch Alarms + SNS as the mechanism, Databricks
+  Jobs run-status noted moot given the earlier platform decision, Prometheus considered/declined
+  (pull model doesn't fit scheduled batch Lambda/Fargate), Grafana noted as an optional dashboard
+  layer on top of CloudWatch
 
 **P1**
-- [ ] Define latency SLA / perf monitoring for the query-side API (task requires low-latency lookups — currently undefined)
-- [ ] Note CI/CD gap for the codebase itself (tests/lint on PR, automated build/deploy) — distinct from training-as-CI/CD framing
+- [x] Define latency SLA / perf monitoring for the query-side API — `docs/architecture.md`
+  ("Predictions store" section): splits into query latency (S3's own GET performance, not
+  app-monitored) and freshness (`inference_duration_seconds`, already recorded, alarmed via the
+  same CloudWatch mechanism as the heartbeat)
+- [x] Note CI/CD gap for the codebase itself — `docs/architecture.md`'s intro now states it
+  explicitly: CI (`ci-cd.yml`, lint/unit/e2e/compose on every push/PR) is real; CD
+  (`deploy-staging`/`-prod`/`-dev`) is deliberately stubbed in `Makefile:109-119`
 - [x] Rollback mechanism if newly deployed model performs badly — the image tag is the code+model
   identity (model is baked in, `docs/planning.md`), so rollback is redeploying the previous tag
-- [ ] Note feature store deliberately skipped (shared `forecasting` library sufficient at this scale)
+- [x] Note feature store deliberately skipped — `docs/architecture.md`'s "Feature store" section:
+  named alternatives (SageMaker Feature Store, Feast), and why none of the problems they solve
+  (train/serve skew, online low-latency retrieval, cross-model reuse, point-in-time correctness)
+  apply here yet
 - [ ] Data/model versioning approach + scaling caveat (git-blob hashing doesn't scale; real system = S3 + git pointer/manifest)
 
 **P2**
