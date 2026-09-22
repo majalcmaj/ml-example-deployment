@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=ac5542c7c52be58c260eb07a42e4f4c58bfecad5; date=2026-09-22 -->
 # Phase 06 — docs
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — ac5542c7c52be58c260eb07a42e4f4c58bfecad5 (2026-09-22)
 
 Read `docs/docker-deploy/prompt.md` first.
 

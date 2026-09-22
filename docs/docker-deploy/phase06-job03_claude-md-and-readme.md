@@ -1,7 +1,7 @@
-<!-- plan-status: pending -->
+<!-- plan-status: done; commit=ac5542c7c52be58c260eb07a42e4f4c58bfecad5; date=2026-09-22 -->
 # phase06 · Job 03 — claude-md-and-readme
 
-> **Status:** ⬜ PENDING
+> **Status:** ✅ DONE — ac5542c7c52be58c260eb07a42e4f4c58bfecad5 (2026-09-22)
 
 Read `docs/docker-deploy/prompt.md` and the parent phase file first. This job runs in its own git
 worktree; touch only the files in its slice (jobs are file-disjoint).
