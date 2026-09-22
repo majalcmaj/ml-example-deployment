@@ -7,7 +7,7 @@
 # ## 1. Install and import dependencies
 # The cell installs only missing packages, then imports the libraries used below.
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,34 +32,43 @@ from xgboost import XGBRegressor
 
 from training.config import CONFIG
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 log = get_logger(__name__)
 
 RANDOM_SEED = 42
+VALIDATION_DAYS = 30
+
 pd.set_option("display.max_rows", 100)
 pd.set_option("display.max_columns", 50)
 
 # ## 2. Load CSV files
 # Find the project data directory, load every CSV with pandas, label its source, and combine all rows.
 
-DATA_DIR = CONFIG.data_dir
-csv_files = sorted(DATA_DIR.glob("*.csv"))
-if not csv_files:
-    raise FileNotFoundError(f"No CSV files found in {DATA_DIR}")
 
-frames = []
-for csv_file in csv_files:
-    frame = pd.read_csv(csv_file)
-    frame["Source_File"] = csv_file.name
-    frames.append(frame)
+def load_training_data(data_dir: Path) -> pd.DataFrame:
+    csv_files = sorted(data_dir.glob("*.csv"))
+    if not csv_files:
+        raise FileNotFoundError(f"No CSV files found in {data_dir}")
 
-raw_sales = pd.concat(frames, ignore_index=True)
-log.info(f"Loaded {len(raw_sales):,} rows from {len(csv_files)} file(s):")
-log.info([path.name for path in csv_files])
+    frames = []
+    for csv_file in csv_files:
+        frame = pd.read_csv(csv_file)
+        frame["Source_File"] = csv_file.name
+        frames.append(frame)
+
+    raw_sales = pd.concat(frames, ignore_index=True)
+    log.info(f"Loaded {len(raw_sales):,} rows from {len(csv_files)} file(s):")
+    log.info([path.name for path in csv_files])
+    return raw_sales
+
+
+raw_sales = load_training_data(CONFIG.data_dir)
 
 # ## 3. Inspect and validate the data
 # Review the data before changing it. The three configuration values below identify the date, product category, and quantity columns.
 
-VALIDATION_DAYS = 30
 
 log.info(raw_sales.head())
 log.info("Shape: %s", raw_sales.shape)
