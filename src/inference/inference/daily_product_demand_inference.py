@@ -2,9 +2,6 @@ from typing import TYPE_CHECKING
 
 from common.context import init_context
 from common.forecast_metadata import ForecastMetadata
-from common.preprocessing import (
-    validate_required_columns_present,
-)
 
 from common import logger
 from inference.config import CONFIG
@@ -31,7 +28,6 @@ def main(
     config: Config, sales_gateway: SalesGateway, metadata: ForecastMetadata
 ) -> None:
     recent_sales = _obtain_recent_sales(sales_gateway)
-    validate_required_columns_present(recent_sales)
     _all_dates, latest_date, daily_sales = preprocess_data(metadata, recent_sales)
 
     forecast_date, future_features, X_future = reconstruct_training_features(

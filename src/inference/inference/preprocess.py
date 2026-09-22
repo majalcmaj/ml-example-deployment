@@ -6,6 +6,7 @@ from common.preprocessing import (
     aggregate_per_category,
     columns_to_expected_types,
     get_valid_date_target_array,
+    validate_required_columns_present,
 )
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ def preprocess_data(
 ) -> tuple[pd.DatetimeIndex, pd.Timestamp, pd.DataFrame]:
     """Normalize the response into one daily row per known category, fill absent date-category combinations with zero, and verify enough history exists for the model's 28-day features."""
     log = get_logger(__name__)
+    validate_required_columns_present(sales)
     model_config = metadata.configuration
     sales = columns_to_expected_types(sales)
 
