@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from forecasting.consts import (
     CATEGORY_COLUMN,
@@ -17,7 +17,11 @@ from forecasting.features import (
 )
 from forecasting.metadata import ForecastMetadata, ModelConfiguration
 from forecasting.model import make_forecast, save_model
+from infra.context import init_context
 from infra.logger import get_logger
+from infra.metrics import LoggingMetricsSink, MetricsCollector
+
+init_context()
 
 from training.config import CONFIG
 from training.data_loading import load_training_data
@@ -136,14 +140,32 @@ def _prepare_data(config: Config) -> PreparedData:
     )
 
 
-def _train_and_evaluate(prepared: PreparedData) -> TrainedModel:
-    model = fit_model(
-        prepared.X_train,
-        prepared.y_train,
-        prepared.X_validation,
-        prepared.y_validation,
-        RANDOM_SEED,
+def _fit_model_timed(prepared: PreparedData, metrics: MetricsCollector) -> XGBRegressor:
+    with metrics.timer("training_duration_seconds"):
+        return fit_model(
+            prepared.X_train,
+            prepared.y_train,
+            prepared.X_validation,
+            prepared.y_validation,
+            RANDOM_SEED,
+        )
+
+
+def _record_evaluation_metrics(
+    metrics: MetricsCollector, overall_metrics: pd.Series, train_rows: int
+) -> None:
+    metrics.record("validation_mae", cast("float", overall_metrics["MAE"]))
+    metrics.record("validation_rmse", cast("float", overall_metrics["RMSE"]))
+    metrics.record(
+        "validation_wmape_percent", cast("float", overall_metrics["WMAPE_Percent"])
     )
+    metrics.record("train_rows", train_rows)
+
+
+def _train_and_evaluate(
+    prepared: PreparedData, metrics: MetricsCollector
+) -> TrainedModel:
+    model = _fit_model_timed(prepared, metrics)
     log.info("Model training complete.")
 
     overall_metrics, category_metrics = evaluate_predictions(
@@ -151,6 +173,9 @@ def _train_and_evaluate(prepared: PreparedData) -> TrainedModel:
     )
     log.info(overall_metrics.to_frame())
     log.info(category_metrics)
+
+    _record_evaluation_metrics(metrics, overall_metrics, len(prepared.train_data))
+
     return TrainedModel(
         model=model, overall_metrics=overall_metrics, category_metrics=category_metrics
     )
@@ -195,11 +220,12 @@ def _persist_outputs(
     log.info(metadata)
 
 
-def run(config: Config) -> None:
+def run(config: Config, metrics: MetricsCollector) -> None:
     prepared = _prepare_data(config)
-    trained = _train_and_evaluate(prepared)
+    trained = _train_and_evaluate(prepared, metrics)
     _persist_outputs(config, prepared, trained)
 
 
 if __name__ == "__main__":
-    run(CONFIG)
+    with MetricsCollector(LoggingMetricsSink()) as metrics:
+        run(CONFIG, metrics)

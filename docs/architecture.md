@@ -26,20 +26,11 @@ flowchart LR
     ECR --> INF
     SALESAPI[[Sales API<br/>mock or real]] -->|GET recent sales| INF
     INF -->|POST forecast| SALESAPI
-    INF --> DDB[(DynamoDB:<br/>predictions)]
-    DDB --> READ[Read Lambda]
-    READ --> APIGW[API Gateway]
-    APIGW --> CLIENT[External client]
+    INF --> S3PRED[(S3: recent sales log<br/>+ daily forecast)]
+    S3PRED --> CLIENT[External client]
     TRAIN -.heartbeat metric.-> CW[CloudWatch alarm:<br/>missing heartbeat]
     INF -.heartbeat metric.-> CW
-
-    style APIGW stroke-dasharray: 5,5
-    style READ stroke-dasharray: 5,5
-    style DDB stroke-dasharray: 5,5
 ```
-
-Dashed nodes (`DynamoDB`, the read `Lambda`, `API Gateway`) are the **designed-not-built** low-
-latency query path — see below.
 
 ## Two schedules, two compute shapes
 
@@ -83,7 +74,7 @@ Two strategies fall out of that one field:
 - **Mounted or fetched at start** — point `artifact_dir` (`INFERENCE_ARTIFACT_DIR`) at a mounted
   volume or have the entrypoint pull from S3 before `verify_artifacts_present` runs. Nothing in
   `forecasting` needs to change; this is a deploy-time config choice, not a code fork. This is the
-  shape you reach for once baking stops making sense — see `docs/what_if.md` #2.
+  shape you reach for once baking stops making sense — see `docs/what_if.md` #3.
 
 ### Why baked, not fetched, for the default path
 
@@ -92,7 +83,7 @@ keep hot for a once-a-day invocation. Baking means the image *is* self-contained
 on the critical path, no "S3 was slow/unreachable, fail the whole day's forecast" failure mode, and
 the container fails at `docker build` time (missing artifact) rather than at invocation time. The
 cost is releases coupling model and code together — accepted deliberately here because a daily
-batch job has no user-facing deploy-window pressure; see `docs/what_if.md` #2 for when that cost
+batch job has no user-facing deploy-window pressure; see `docs/what_if.md` #3 for when that cost
 stops being acceptable.
 
 ### Rollback
@@ -113,14 +104,28 @@ tag as the unit of rollback (it pins exact bytes), not the git commit (it doesn'
 
 ## Predictions store and the low-latency read path
 
-Inference writes each day's forecast to DynamoDB, keyed by category/date, so a read is a
-point/range lookup rather than a scan. **This half of the diagram — DynamoDB, the read Lambda,
-API Gateway — is designed, not built.** `docs/task.md:21` requires external clients to query
-predictions "at any time with low latency"; nothing in this repo implements that query path today
-(inference only writes `outputs/inference_next_day_forecast.csv` via
-`src/inference/inference/gateway.py`'s `upload_inference_results`, itself a POST to a sales API,
-mock or real). `docs/TODO.md:65` already flags the resulting gap explicitly: no latency SLA or
-perf monitoring is defined for that read path, because it doesn't exist yet to monitor.
+Inference writes each day's forecast, plus the recent-sales window it pulled from the sales API,
+to S3 as JSON/CSV under a dated key — the same artifact already produced locally as
+`outputs/inference_next_day_forecast.csv` via `src/inference/inference/gateway.py`'s
+`upload_inference_results` (currently a POST to a sales API, mock or real), just added as a second
+sink. Persisting the recent-sales window alongside the forecast also covers `docs/TODO.md`'s
+"persist inference input data ... for future ground-truth join" item for free — it's the same S3
+write, not a separate mechanism.
+
+`docs/task.md:21` requires external clients to query predictions "at any time with low latency."
+A direct read of a well-known/dated S3 key clears that bar at the request volume this system
+actually has (a handful of clients, one new object a day): GET latency is tens of milliseconds,
+no compute sits on the read path, and there's no service to keep warm or pay for idly. Access is a
+public-read bucket policy, justified by the data being non-PII aggregate sales figures
+(`docs/planning.md`: "no compliance/retention concern"); a presigned-URL scheme is the fallback if
+public-read is rejected later, without anything upstream changing. `docs/TODO.md:65`'s open item
+on defining a latency SLA still applies here — an S3 GET has no formally stated SLA yet either,
+just an informal expectation it clears the bar at this volume.
+
+This deliberately does *not* give clients filtered/indexed/paginated queries, per-client auth, or
+protection against write concurrency — a DynamoDB table behind a read Lambda and API Gateway would,
+at the cost of a running query tier this system doesn't need at today's scale. See
+`docs/what_if.md` #2 for that escalation and its trigger.
 
 ## Failure signal: heartbeat, not just bad values
 

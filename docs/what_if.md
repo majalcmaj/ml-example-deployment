@@ -21,7 +21,7 @@ cadence) and you now pay for a running task instead of Lambda's per-invocation b
 only once you're actually hitting the ceiling, not preemptively.
 
 **Why Fargate and not SageMaker Processing/Training Jobs**, the more ML-specialized tool for
-batch container workloads: considered and declined, same reasoning as #3 below. SageMaker's
+batch container workloads: considered and declined, same reasoning as #4 below. SageMaker's
 batch primitives buy you things this project doesn't need yet (managed spot/distributed
 execution, built-in Pipelines integration) at the cost of a container contract the images don't
 follow today — SageMaker expects specific `/opt/ml/{input,output,processing}` conventions and its
@@ -30,9 +30,24 @@ has. Fargate runs the *exact* image and entrypoint unchanged; a SageMaker move w
 reworking the Dockerfiles around SageMaker's I/O conventions for capabilities (distributed
 training, spot) this single-model, daily-batch job doesn't use. Revisit if training ever needs
 multi-node distribution or spot-driven cost cutting — until then it's operational surface without
-payoff, the same bar #3 applies to the model registry.
+payoff, the same bar #4 applies to the model registry.
 
-## 2. Model too large to bake, or model releases need to decouple from code releases
+## 2. Need filtered/indexed queries, per-client auth, or write concurrency the flat S3 object can't express
+
+**Trigger:** multiple clients needing filtered/paginated/indexed lookups (not just "get today's
+forecast"), per-client authentication or rate limits, or concurrent-write concerns the baseline's
+single S3 object can't express.
+
+**Move:** this is the design `docs/architecture.md` deliberately doesn't build today — a DynamoDB
+table (predictions keyed by category/date) behind a read Lambda and API Gateway. Inference's write
+target changes from the S3 object to a DynamoDB `PutItem`; the `forecasting` library and the rest
+of inference's compute logic don't change, only the sink.
+
+**Cost:** a running query tier (DynamoDB + a read Lambda + API Gateway) instead of a static
+object — you pay for indexed lookups and auth/rate-limiting you don't need at low request volume,
+in exchange for the flexibility once you do.
+
+## 3. Model too large to bake, or model releases need to decouple from code releases
 
 **Trigger:** the model artifact grows past what's comfortable to embed in an image layer, or the
 team wants to ship a new model without cutting a new code release (and vice versa).
@@ -49,7 +64,7 @@ tracking *which* model version is live becomes its own piece of state instead of
 the image tag. You also reintroduce a startup network dependency (S3 reachability) that baking
 was specifically chosen to avoid.
 
-## 3. Need experiment tracking, a model registry, or staged model promotion
+## 4. Need experiment tracking, a model registry, or staged model promotion
 
 **Trigger:** more than one person training models, wanting to compare runs, or needing a
 promote-to-production gate that isn't "someone manually copies files into S3."
@@ -67,7 +82,7 @@ those stops being true.
 **Cost:** operational surface (another managed service to configure and pay for) in exchange for
 promotion workflow and run comparison you don't currently need.
 
-## 4. Per-request rather than daily predictions
+## 5. Per-request rather than daily predictions
 
 **Trigger:** the product requirement changes from "predictions computed once a day, queried
 later" to predictions computed *at* query time.
@@ -75,7 +90,8 @@ later" to predictions computed *at* query time.
 **Move:** this isn't a scaling tweak to the batch job — the batch shape is wrong for it entirely.
 It becomes a served model behind API Gateway (a real-time inference endpoint, e.g. SageMaker
 real-time or a Lambda invoked synchronously per request) instead of a scheduled job writing to
-DynamoDB. The `forecasting` library — feature engineering, model load/predict
+S3 (or, if #2 above was already taken, to DynamoDB). The `forecasting` library — feature
+engineering, model load/predict
 (`forecasting/model.py`), the artifact contract — is the part that's already shaped to be reused
 here; only the entrypoint (batch script vs. request handler) and the trigger (EventBridge vs. API
 Gateway) change.
@@ -87,6 +103,6 @@ different problem, not an extension of this one.
 
 ## See also
 
-`docs/architecture.md` for the baseline these branches escalate from, and for the
-designed-not-built low-latency read path (DynamoDB + read Lambda + API Gateway) that #4 above
+`docs/architecture.md` for the baseline these branches escalate from — including its S3-direct
+read path, which #2 above escalates to DynamoDB + read Lambda + API Gateway, and which #5 above
 would replace with a synchronous serving path instead.

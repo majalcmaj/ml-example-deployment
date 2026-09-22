@@ -5,7 +5,9 @@ import pytest
 from forecasting.consts import METADATA_FILENAME, MODEL_FILENAME
 from inference.config import Config
 from inference.main import run
+from infra.metrics import MetricsCollector
 from stub_gateway import StubSalesGateway
+from testkit.metrics import StubMetricsSink
 
 MEMBER_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = MEMBER_ROOT.parents[1]
@@ -28,5 +30,5 @@ def run_root(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, StubSalesG
         "output_dir": outputs,
     })
     gateway = StubSalesGateway(REPO_ROOT / "data", history_days=60)
-    run(config, gateway)
+    run(config, gateway, MetricsCollector(StubMetricsSink()))
     return root, gateway

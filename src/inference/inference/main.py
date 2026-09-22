@@ -6,6 +6,7 @@ from forecasting.features import build_future_features, encode_for_model
 from forecasting.metadata import ForecastMetadata
 from forecasting.model import make_forecast
 from infra.context import init_context
+from infra.metrics import LoggingMetricsSink, MetricsCollector
 
 from inference.config import CONFIG
 from inference.preprocess import payload_to_dataframe, preprocess_data
@@ -21,15 +22,41 @@ if TYPE_CHECKING:
     from inference.config import Config
 
 
-def _obtain_recent_sales(sales_gateway: SalesGateway) -> pd.DataFrame:
-    source_payload = sales_gateway.fetch_source_payload()
-    return payload_to_dataframe(source_payload)
+def _make_forecast_timed(
+    config: Config,
+    future_features: pd.DataFrame,
+    X_future: pd.DataFrame,
+    metadata: ForecastMetadata,
+    metrics: MetricsCollector,
+) -> pd.DataFrame:
+    with metrics.timer("inference_duration_seconds"):
+        return make_forecast(
+            config.artifact_dir, future_features, X_future, metadata.configuration
+        )
+
+
+def _record_forecast_metrics(metrics: MetricsCollector, forecast: pd.DataFrame) -> None:
+    metrics.record("forecast_rows", len(forecast))
+    metrics.record(
+        "forecast_total_units", cast("float", forecast["Predicted_Qty"].sum())
+    )
+
+
+def _record_metadata_metrics(
+    metrics: MetricsCollector, metadata: ForecastMetadata
+) -> None:
+    metrics.record("model_feature_count", len(metadata.model_feature_columns))
+    metrics.record("category_count", len(metadata.categories))
 
 
 def main(
-    config: Config, sales_gateway: SalesGateway, metadata: ForecastMetadata
+    config: Config,
+    sales_gateway: SalesGateway,
+    metadata: ForecastMetadata,
+    metrics: MetricsCollector,
 ) -> None:
-    recent_sales = _obtain_recent_sales(sales_gateway)
+    source_payload = sales_gateway.fetch_source_payload()
+    recent_sales = payload_to_dataframe(source_payload)
     daily_sales = preprocess_data(metadata, recent_sales)
 
     future_features = build_future_features(metadata, daily_sales)
@@ -38,9 +65,10 @@ def main(
         "pd.Timestamp", future_features[metadata.configuration.date_column].max()
     )
 
-    forecast = make_forecast(
-        config.artifact_dir, future_features, X_future, metadata.configuration
+    forecast = _make_forecast_timed(
+        config, future_features, X_future, metadata, metrics
     )
+    _record_forecast_metrics(metrics, forecast)
 
     upload_inference_results(sales_gateway, forecast_date, forecast, metadata)
 
@@ -49,7 +77,7 @@ def main(
     )
 
 
-def run(config: Config, sales_gateway: SalesGateway) -> None:
+def run(config: Config, sales_gateway: SalesGateway, metrics: MetricsCollector) -> None:
     log = logger.get_logger(__name__)
     log.info("Running inference with config: %s", config.model_dump_json(indent=2))
 
@@ -62,9 +90,11 @@ def run(config: Config, sales_gateway: SalesGateway) -> None:
         len(metadata.model_feature_columns),
         len(metadata.categories),
     )
+    _record_metadata_metrics(metrics, metadata)
 
-    main(config, sales_gateway, metadata)
+    main(config, sales_gateway, metadata, metrics)
 
 
 if __name__ == "__main__":
-    run(CONFIG, RestGateway(CONFIG))
+    with MetricsCollector(LoggingMetricsSink()) as metrics:
+        run(CONFIG, RestGateway(CONFIG), metrics)
