@@ -8,7 +8,7 @@ requirements shift.
 
 ```mermaid
 flowchart LR
-    EB1[EventBridge<br/>daily schedule] --> TRAIN[Training job<br/>Fargate task / SageMaker<br/>Training Job<br/>training.Dockerfile]
+    EB1[EventBridge<br/>daily schedule] --> TRAIN[Training job<br/>Batch task / SageMaker<br/>Training Job<br/>training.Dockerfile]
     S3RAW[(S3: raw sales)] --> TRAIN
     TRAIN --> S3ART[(S3: versioned model<br/>+ metadata artifacts)]
     S3ART --> CI[CI build:<br/>bake artifacts into<br/>inference image]
@@ -28,7 +28,7 @@ flowchart LR
 
 The split is by workload, not by platform:
 
-- **Training** → a Fargate task or a SageMaker Training Job, not Lambda. Lambda's
+- **Training** → a Batch on Fargate task or a SageMaker Training Job, not Lambda. Lambda's
   15-minute execution cap and 10 GB image/`/tmp` ceiling are fine against today's
   ~20k-row CSV but don't generalise, and Lambda has no GPU path if the model ever needs
   one. Training reads raw sales from S3 and writes the model + metadata back to S3 — the
@@ -40,7 +40,7 @@ The split is by workload, not by platform:
 
 Both are the *same* container contract already proven by the local Compose stack:
 training writes into a shared volume, inference reads it back. Swapping the runner from
-Compose to Fargate/Lambda changes the trigger and artifact source, not the domain code
+Compose to Batch/Lambda changes the trigger and artifact source, not the domain code
 inside the image.
 
 **Entrypoint caveat:** the images' current `ENTRYPOINT` (`python -m inference.main` /
